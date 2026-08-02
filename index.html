@@ -99,13 +99,14 @@
             box-shadow: 0 1px 0 #cbd5e1, 0 2px 3px rgba(0,0,0,0.1);
         }
 
-        .led-tx { background-color: #ef4444; box-shadow: 0 0 10px #ef4444; }
-        .led-rx { background-color: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        .led-tx { background-color: #ef4444; box-shadow: 0 0 12px #ef4444; }
+        .led-rx { background-color: #22c55e; box-shadow: 0 0 12px #22c55e; }
         .led-off { background-color: #94a3b8; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-800 min-h-screen flex flex-col items-center justify-center p-3 select-none theme-yellow">
 
+    <!-- Auth Modal -->
     <div id="auth-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl space-y-4">
             <div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30 text-2xl">
@@ -125,6 +126,12 @@
                 </button>
             </form>
         </div>
+    </div>
+
+    <!-- Audio Unlocked Alert Notice -->
+    <div id="audio-unlock-banner" onclick="unlockAudioContext()" class="fixed top-3 bg-amber-500 text-slate-950 font-tech font-bold text-xs px-4 py-2 rounded-full shadow-lg cursor-pointer animate-bounce z-40 flex items-center gap-2">
+        <i class="fa-solid fa-volume-high"></i>
+        <span>画面を1回タップして受信音声を有効化してください</span>
     </div>
 
     <div class="w-full max-w-sm flex flex-col items-center">
@@ -166,8 +173,9 @@
 
             <div class="w-full face-plate p-4 flex flex-col items-center border border-slate-100">
                 
-                <div class="text-center font-bold tracking-wider text-slate-800 text-lg mb-2 font-tech">
-                    Talkpod
+                <div class="text-center font-bold tracking-wider text-slate-800 text-lg mb-2 font-tech flex items-center justify-center gap-2">
+                    <span>Talkpod</span>
+                    <span id="client-id-tag" class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-mono">ID:----</span>
                 </div>
 
                 <!-- Digital LCD Panel -->
@@ -206,7 +214,7 @@
                     </div>
                 </div>
 
-                <!-- Volume Direct Control Bar -->
+                <!-- Direct Volume Control Bar -->
                 <div class="w-full flex items-center justify-between bg-slate-100 rounded-xl px-2 py-1 mb-2 border border-slate-200 text-xs font-tech">
                     <span class="text-slate-500 font-bold text-[10px]">VOLUME</span>
                     <div class="flex items-center gap-1">
@@ -229,7 +237,7 @@
                     </div>
                 </div>
 
-                <!-- Front Keypad -->
+                <!-- Keypad -->
                 <div class="w-full grid grid-cols-4 gap-2 my-1">
                     <button id="btn-menu" class="front-btn h-11 rounded-xl flex flex-col items-center justify-center text-slate-700 text-xs font-bold active:scale-95" title="Menu Mode (CH / VOL)">
                         <i class="fa-solid fa-bars text-xs"></i>
@@ -273,7 +281,7 @@
             <div class="flex justify-between items-center mb-2 pb-1 border-b border-slate-700 text-xs font-tech">
                 <span class="text-slate-300 font-bold flex items-center gap-1.5">
                     <i class="fa-solid fa-comments text-amber-400"></i>
-                    TRANSCRIPT LOG
+                    RADIO LOG & STATUS
                 </span>
                 <div class="flex items-center gap-3">
                     <button id="btn-clear-log" class="text-slate-400 hover:text-slate-200 text-[11px] underline">Clear Log</button>
@@ -283,13 +291,13 @@
                 </div>
             </div>
             
-            <div id="log-container" class="h-24 overflow-y-auto space-y-1.5 text-xs font-tech text-slate-300 pr-1">
-                <div class="text-slate-500 italic text-[11px]">Radio ready. Channel standard mode active.</div>
+            <div id="log-container" class="h-28 overflow-y-auto space-y-1.5 text-xs font-tech text-slate-300 pr-1">
+                <div class="text-slate-500 italic text-[11px]">Radio system ready. Select matching channel to talk across tabs.</div>
             </div>
         </div>
 
         <footer class="mt-3 text-center text-[11px] text-slate-400 font-tech">
-            <span>Talkpod Walkie-Talkie • Web Audio Bandpass & P2P Filter</span>
+            <span>Talkpod Walkie-Talkie • Bandpass Voice Media Streaming</span>
         </footer>
 
     </div>
@@ -327,25 +335,21 @@
         let controlMode = 'CH'; // 'CH' or 'VOL'
         let isTransmitting = false;
         let isKeyLocked = false;
-        let myClientId = 'RAD-' + Math.floor(1000 + Math.random() * 9000);
+        let myClientId = '#' + Math.floor(1000 + Math.random() * 9000);
 
-        // Web Audio API Elements
+        // Web Audio API & MediaRecorder
         let audioCtx = null;
         let masterGainNode = null;
         let micStream = null;
         let micSource = null;
-        let bandpassLow = null;
-        let bandpassHigh = null;
         let analyser = null;
         let staticNoiseNode = null;
         let staticGainNode = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
 
-        // Multi-tab P2P Communication
+        // Inter-tab BroadcastChannel
         let broadcastChan = null;
-
-        // Speech Recognition
-        let recognition = null;
-        let currentTranscript = "";
 
         function checkAuth() {
             const isAuth = localStorage.getItem('talkpod_auth');
@@ -387,28 +391,37 @@
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             audioCtx = new AudioContextClass();
 
-            // Master Gain Node for Volume Control
             masterGainNode = audioCtx.createGain();
             masterGainNode.connect(audioCtx.destination);
             updateVolumeGain();
 
-            // Analyser for visualizer
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 64;
 
-            // Static background noise
             setupBackgroundStaticNoise();
 
-            // Broadcast channel for multi-tab
             try {
-                broadcastChan = new BroadcastChannel('talkpod_radio_network');
+                broadcastChan = new BroadcastChannel('talkpod_radio_network_v2');
                 broadcastChan.onmessage = handleIncomingBroadcast;
             } catch (err) {
                 console.warn('BroadcastChannel not supported', err);
             }
 
-            // Speech Recognition initialization
-            initSpeechRecognition();
+            document.getElementById('client-id-tag').innerText = `ID:${myClientId}`;
+        }
+
+        function unlockAudioContext() {
+            initAudioContext();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    const banner = document.getElementById('audio-unlock-banner');
+                    if (banner) banner.remove();
+                    addLog('音声コンテキスト有効化完了 (受信準備完了)', 'sys');
+                });
+            } else {
+                const banner = document.getElementById('audio-unlock-banner');
+                if (banner) banner.remove();
+            }
         }
 
         function updateVolumeGain() {
@@ -425,7 +438,7 @@
             
             updateVolumeGain();
             updateVolumeDisplay();
-            addLog(`音量変更: VOL ${currentVolume}`, 'sys');
+            addLog(`音量設定: VOL ${currentVolume}`, 'sys');
         }
 
         function updateVolumeDisplay() {
@@ -445,7 +458,6 @@
                 }
             }
 
-            // Update Volume Dots Bar
             if (dots) {
                 for (let i = 0; i < dots.length; i++) {
                     if (i < currentVolume) {
@@ -497,7 +509,7 @@
             filter.Q.value = 1.0;
 
             staticGainNode = audioCtx.createGain();
-            staticGainNode.gain.value = 0.005; // Soft ambient radio static
+            staticGainNode.gain.value = 0.003;
 
             staticNoiseNode.connect(filter);
             filter.connect(staticGainNode);
@@ -519,7 +531,7 @@
             osc1.frequency.setValueAtTime(1200, now);
             osc2.frequency.setValueAtTime(1800, now + 0.07);
 
-            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.setValueAtTime(0.15, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
 
             osc1.connect(gain);
@@ -550,39 +562,14 @@
             osc.stop(now + 0.04);
         }
 
-        function initSpeechRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (SpeechRecognition) {
-                recognition = new SpeechRecognition();
-                recognition.continuous = true;
-                recognition.interimResults = true;
-                recognition.lang = 'ja-JP';
-
-                recognition.onresult = (event) => {
-                    let transcript = '';
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        transcript += event.results[i][0].transcript;
-                    }
-                    currentTranscript = transcript;
-                };
-
-                recognition.onerror = (e) => {
-                    console.log('Speech recognition error', e);
-                };
-            }
-        }
-
         async function startTransmission() {
             if (isTransmitting || isKeyLocked) return;
             if (localStorage.getItem('talkpod_auth') !== 'true') return;
 
-            initAudioContext();
-            if (audioCtx && audioCtx.state === 'suspended') {
-                await audioCtx.resume();
-            }
+            unlockAudioContext();
 
             isTransmitting = true;
-            currentTranscript = "";
+            audioChunks = [];
 
             // UI Updates
             document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-tx transition-all mx-auto';
@@ -590,18 +577,20 @@
             document.getElementById('speaker-status').innerText = 'TRANSMITTING... (SPEAK NOW)';
             document.getElementById('speaker-status').className = 'text-[10px] font-tech text-red-600 bg-red-100 px-2.5 py-1 rounded-full font-bold shadow-sm z-10 border border-red-300 animate-pulse';
 
-            // Audio routing for mic with Bandpass radio filter
+            if (staticGainNode) staticGainNode.gain.value = 0.015;
+
+            // MediaStream & MediaRecorder setup
             try {
                 if (!micStream) {
                     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 }
-                micSource = audioCtx.createMediaStreamSource(micStream);
 
-                bandpassLow = audioCtx.createBiquadFilter();
+                micSource = audioCtx.createMediaStreamSource(micStream);
+                const bandpassLow = audioCtx.createBiquadFilter();
                 bandpassLow.type = 'highpass';
                 bandpassLow.frequency.value = 350;
 
-                bandpassHigh = audioCtx.createBiquadFilter();
+                const bandpassHigh = audioCtx.createBiquadFilter();
                 bandpassHigh.type = 'lowpass';
                 bandpassHigh.frequency.value = 3000;
 
@@ -609,14 +598,22 @@
                 bandpassLow.connect(bandpassHigh);
                 bandpassHigh.connect(analyser);
 
-                if (staticGainNode) staticGainNode.gain.value = 0.02; // Elevated static while transmitting
+                // Setup MediaRecorder
+                let mimeType = 'audio/webm';
+                if (!MediaRecorder.isTypeSupported('audio/webm')) {
+                    mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+                }
+
+                mediaRecorder = mimeType ? new MediaRecorder(micStream, { mimeType }) : new MediaRecorder(micStream);
+                
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
+                };
+
+                mediaRecorder.start(50); // Record chunks every 50ms
 
             } catch (err) {
-                console.error('Microphone access denied', err);
-            }
-
-            if (recognition) {
-                try { recognition.start(); } catch(e){}
+                console.warn('Microphone not available, using tone generator fallback', err);
             }
         }
 
@@ -630,54 +627,126 @@
             document.getElementById('speaker-status').innerText = 'HOLD SIDE BUTTON OR SPACE TO TALK';
             document.getElementById('speaker-status').className = 'text-[10px] font-tech text-slate-600 bg-white/90 px-2.5 py-1 rounded-full font-bold shadow-sm z-10 border border-slate-200';
 
-            if (staticGainNode) staticGainNode.gain.value = 0.005;
-
-            if (recognition) {
-                try { recognition.stop(); } catch(e){}
-            }
+            if (staticGainNode) staticGainNode.gain.value = 0.003;
 
             playRogerBeep();
 
-            setTimeout(() => {
-                const messageText = currentTranscript.trim() || "「感度良好、オーバー」";
-                const activeCh = CHANNELS[currentChannelIdx];
+            const activeCh = CHANNELS[currentChannelIdx];
 
-                addLog(`送信 (${activeCh.name}): ${messageText}`, 'tx');
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                mediaRecorder.onstop = async () => {
+                    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                    const arrayBuffer = await blob.arrayBuffer();
 
-                // Broadcast to other tabs
+                    addLog(`[CH ${activeCh.id}] 送信完了 (${Math.round(blob.size/1024)}KB)`, 'tx');
+
+                    if (broadcastChan) {
+                        broadcastChan.postMessage({
+                            type: 'RADIO_VOICE_STREAM',
+                            channelId: activeCh.id,
+                            sender: myClientId,
+                            audioBuffer: arrayBuffer,
+                            mimeType: blob.type
+                        });
+                    }
+                };
+            } else {
+                // Fallback synthesized tone transmission if mic absent
+                addLog(`[CH ${activeCh.id}] テストシグナル送信完了`, 'tx');
                 if (broadcastChan) {
                     broadcastChan.postMessage({
-                        type: 'RADIO_MSG',
+                        type: 'RADIO_TEST_SIGNAL',
                         channelId: activeCh.id,
-                        sender: myClientId,
-                        text: messageText
+                        sender: myClientId
                     });
                 }
-            }, 200);
+            }
         }
 
-        function handleIncomingBroadcast(event) {
+        async function handleIncomingBroadcast(event) {
             const data = event.data;
-            if (!data || data.type !== 'RADIO_MSG') return;
+            if (!data || data.sender === myClientId) return;
 
             const activeCh = CHANNELS[currentChannelIdx];
-            if (data.channelId === activeCh.id && data.sender !== myClientId) {
-                document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-rx transition-all mx-auto';
-                playRogerBeep();
-                addLog(`受信 (${activeCh.name}): ${data.text}`, 'rx');
 
-                if ('speechSynthesis' in window && currentVolume > 0) {
-                    const utter = new SpeechSynthesisUtterance(data.text);
-                    utter.lang = 'ja-JP';
-                    utter.pitch = 0.9;
-                    utter.volume = currentVolume / 8; // Adjust speech volume
-                    window.speechSynthesis.speak(utter);
-                }
-
-                setTimeout(() => {
-                    document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-off transition-all mx-auto';
-                }, 1500);
+            // CHANNEL CHECK
+            if (data.channelId !== activeCh.id) {
+                // Different channel - SILENCE & LOG IGNORE
+                addLog(`[別CH無視] CH ${data.channelId} の通信をスキップ`, 'sys');
+                return;
             }
+
+            // MATCHED CHANNEL - RECEIVE VOICE
+            document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-rx transition-all mx-auto';
+            playRogerBeep();
+
+            if (data.type === 'RADIO_VOICE_STREAM' && data.audioBuffer) {
+                addLog(`[CH ${activeCh.id}] 端末 ${data.sender} からの音声を受信`, 'rx');
+                await playFilteredRadioVoice(data.audioBuffer);
+            } else if (data.type === 'RADIO_TEST_SIGNAL') {
+                addLog(`[CH ${activeCh.id}] 端末 ${data.sender} からテスト信号を受信`, 'rx');
+                playSynthesizedBeepSpeech();
+            }
+
+            setTimeout(() => {
+                document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-off transition-all mx-auto';
+            }, 1000);
+        }
+
+        async function playFilteredRadioVoice(arrayBuffer) {
+            if (!audioCtx) initAudioContext();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            try {
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+                const source = audioCtx.createBufferSource();
+                source.buffer = audioBuffer;
+
+                // Authentic bandpass filter for walkie-talkie speaker effect
+                const hp = audioCtx.createBiquadFilter();
+                hp.type = 'highpass';
+                hp.frequency.value = 450;
+
+                const lp = audioCtx.createBiquadFilter();
+                lp.type = 'lowpass';
+                lp.frequency.value = 2600;
+
+                const rxGain = audioCtx.createGain();
+                rxGain.gain.value = currentVolume / 8;
+
+                source.connect(hp);
+                hp.connect(lp);
+                lp.connect(rxGain);
+                rxGain.connect(audioCtx.destination);
+
+                source.start(0);
+                source.onended = () => {
+                    playRogerBeep();
+                };
+            } catch (err) {
+                console.error('Radio voice play error:', err);
+            }
+        }
+
+        function playSynthesizedBeepSpeech() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+
+            gain.gain.setValueAtTime(0.1 * (currentVolume / 8), now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+            osc.connect(gain);
+            gain.connect(masterGainNode || audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.4);
         }
 
         function updateChannelDisplay() {
@@ -693,7 +762,7 @@
             playKeyClickSound();
             currentChannelIdx = (currentChannelIdx + delta + CHANNELS.length) % CHANNELS.length;
             updateChannelDisplay();
-            addLog(`チャンネル変更: ${CHANNELS[currentChannelIdx].name}`, 'sys');
+            addLog(`チャンネル切替: ${CHANNELS[currentChannelIdx].name}`, 'sys');
         }
 
         function toggleLock() {
@@ -753,7 +822,6 @@
                         x += barWidth;
                     }
                 } else {
-                    // Subtle Idle Wave
                     ctx.beginPath();
                     ctx.strokeStyle = 'rgba(51, 65, 85, 0.2)';
                     ctx.lineWidth = 1.5;
@@ -789,7 +857,6 @@
             const sidePtt = document.getElementById('side-ptt');
             const mainPttTouch = document.getElementById('main-ptt-touch');
 
-            // Mouse / Touch PTT Events
             const startPtt = (e) => { e.preventDefault(); startTransmission(); };
             const stopPtt = (e) => { e.preventDefault(); stopTransmission(); };
 
@@ -803,13 +870,11 @@
             mainPttTouch.addEventListener('touchstart', startPtt);
             mainPttTouch.addEventListener('touchend', stopPtt);
 
-            // Keypad buttons
             document.getElementById('btn-up').addEventListener('click', handleUpButton);
             document.getElementById('btn-down').addEventListener('click', handleDownButton);
             document.getElementById('btn-scan').addEventListener('click', toggleLock);
             document.getElementById('btn-menu').addEventListener('click', toggleControlMode);
 
-            // Direct Volume Bar Control Buttons
             document.getElementById('btn-vol-up').addEventListener('click', () => changeVolume(1));
             document.getElementById('btn-vol-down').addEventListener('click', () => changeVolume(-1));
 
@@ -817,7 +882,6 @@
                 document.getElementById('log-container').innerHTML = '';
             });
 
-            // Keyboard Spacebar PTT
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'Space' && !e.repeat && document.activeElement.tagName !== 'INPUT') {
                     e.preventDefault();
@@ -831,6 +895,9 @@
                     stopTransmission();
                 }
             });
+
+            window.addEventListener('click', unlockAudioContext);
+            window.addEventListener('keydown', unlockAudioContext);
         }
 
         window.addEventListener('load', () => {
@@ -839,16 +906,6 @@
             updateChannelDisplay();
             updateVolumeDisplay();
             startVisualizer();
-            
-            const unlockAudio = () => {
-                if (localStorage.getItem('talkpod_auth') === 'true') {
-                    initAudioContext();
-                }
-                window.removeEventListener('click', unlockAudio);
-                window.removeEventListener('keydown', unlockAudio);
-            };
-            window.addEventListener('click', unlockAudio);
-            window.addEventListener('keydown', unlockAudio);
         });
     </script>
 </body>
