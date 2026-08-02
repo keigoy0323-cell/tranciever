@@ -12,7 +12,7 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=VT323&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=VT323&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
         body {
@@ -20,6 +20,7 @@
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
         }
 
         .font-lcd {
@@ -30,101 +31,199 @@
             font-family: 'Chakra Petch', sans-serif;
         }
 
-        /* Theme Color Definitions */
+        /* Dynamic Visual Theme Color Definitions */
         .theme-yellow {
-            --body-bg: linear-gradient(145deg, #ffc000, #ff9100);
-            --body-border: #e07b00;
-            --accent-shadow: rgba(255, 145, 0, 0.4);
+            --body-bg: linear-gradient(155deg, #ffca28 0%, #f57c00 100%);
+            --body-border: #d97706;
+            --accent-shadow: rgba(245, 124, 0, 0.45);
+            --glow-color: #f59e0b;
         }
         .theme-purple {
-            --body-bg: linear-gradient(145deg, #a855f7, #7e22ce);
+            --body-bg: linear-gradient(155deg, #c084fc 0%, #7e22ce 100%);
             --body-border: #6b21a8;
-            --accent-shadow: rgba(168, 85, 247, 0.4);
+            --accent-shadow: rgba(168, 85, 247, 0.45);
+            --glow-color: #a855f7;
         }
         .theme-blue {
-            --body-bg: linear-gradient(145deg, #38bdf8, #0284c7);
+            --body-bg: linear-gradient(155deg, #38bdf8 0%, #0284c7 100%);
             --body-border: #0369a1;
-            --accent-shadow: rgba(56, 189, 248, 0.4);
+            --accent-shadow: rgba(56, 189, 248, 0.45);
+            --glow-color: #38bdf8;
         }
         .theme-pink {
-            --body-bg: linear-gradient(145deg, #f472b6, #db2777);
-            --body-border: #be185d;
-            --accent-shadow: rgba(244, 114, 182, 0.4);
+            --body-bg: linear-gradient(155deg, #f472b6 0%, #be185d 100%);
+            --body-border: #9d174d;
+            --accent-shadow: rgba(244, 114, 182, 0.45);
+            --glow-color: #f472b6;
         }
 
+        /* 3D Walkie-Talkie Main Chassis */
         .walkie-body {
             background: var(--body-bg);
-            border: 4px solid var(--body-border);
-            box-shadow: 0 20px 40px var(--accent-shadow), inset 0 3px 6px rgba(255,255,255,0.4);
-            border-radius: 90px 90px 70px 70px;
+            border: 5px solid var(--body-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 
+                        0 0 35px var(--accent-shadow),
+                        inset 0 4px 8px rgba(255, 255, 255, 0.6),
+                        inset 0 -6px 12px rgba(0, 0, 0, 0.3);
+            border-radius: 95px 95px 75px 75px;
+            transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
         }
 
+        /* Antenna Texture & Gradient */
+        .antenna-top {
+            background: linear-gradient(180deg, #f8fafc 0%, #cbd5e1 60%, #94a3b8 100%);
+            box-shadow: inset -2px 0 4px rgba(0,0,0,0.2), inset 2px 0 4px rgba(255,255,255,0.8), 0 -4px 10px rgba(0,0,0,0.3);
+        }
+        .antenna-inner {
+            background: linear-gradient(180deg, #e2e8f0 0%, #94a3b8 100%);
+        }
+
+        /* Faceplate White Inset Container */
         .face-plate {
-            background-color: #ffffff;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.06), 0 6px 12px rgba(0,0,0,0.15);
-            border-radius: 50px 50px 60px 60px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.18);
+            border-radius: 55px 55px 65px 65px;
+            position: relative;
+            overflow: hidden;
         }
 
+        /* Subtle Light Reflection Glare on Faceplate */
+        .face-plate::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 45%, rgba(255,255,255,0.4) 50%, transparent 55%);
+            pointer-events: none;
+        }
+
+        /* LCD Retro Display */
         .lcd-screen {
-            background: linear-gradient(135deg, #d3dad1 0%, #bac4b8 100%);
-            border: 3px solid #8e9b8b;
-            box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.25);
-            color: #1a221a;
+            background: linear-gradient(135deg, #c5d3c1 0%, #a2b39e 100%);
+            border: 3.5px solid #6b7a6a;
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(255,255,255,0.5);
+            color: #111a11;
+            text-shadow: 1px 1px 0px rgba(180, 195, 175, 0.8);
+            position: relative;
         }
 
+        /* LCD Screen Scanlines Overlay */
+        .lcd-screen::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.04),
+                rgba(0, 0, 0, 0.04) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+
+        /* Side Push-To-Talk Metallic Grip Button */
         .side-ptt-btn {
-            background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 100%);
-            box-shadow: -4px 4px 8px rgba(0,0,0,0.25), inset 0 2px 2px rgba(255,255,255,0.8);
-            border: 2px solid #cbd5e1;
-            transition: all 0.1s ease;
+            background: linear-gradient(90deg, #f8fafc 0%, #d1d5db 50%, #9ca3af 100%);
+            box-shadow: -6px 6px 12px rgba(0,0,0,0.35), inset 0 2px 2px rgba(255,255,255,0.9), inset -2px -2px 4px rgba(0,0,0,0.2);
+            border: 2px solid #94a3b8;
+            transition: all 0.08s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .side-ptt-btn:active, .side-ptt-btn.active {
-            transform: translateX(4px) scale(0.98);
-            background: #d1d5db;
-            box-shadow: -1px 2px 4px rgba(0,0,0,0.3);
+            transform: translateX(5px) scale(0.97);
+            background: linear-gradient(90deg, #9ca3af 0%, #6b7280 100%);
+            box-shadow: -1px 2px 4px rgba(0,0,0,0.4), inset 0 2px 4px rgba(0,0,0,0.4);
         }
 
+        /* Dot-Matrix Speaker Hole Pattern */
         .speaker-dots {
-            background-image: radial-gradient(#334155 35%, transparent 35%);
+            background-image: radial-gradient(#1e293b 38%, transparent 39%);
             background-size: 8px 8px;
             background-position: 0 0;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.15);
         }
 
+        /* Dynamic Front Buttons */
         .front-btn {
-            background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-            box-shadow: 0 3px 0 #cbd5e1, 0 4px 6px rgba(0,0,0,0.1);
-            transition: all 0.08s ease;
+            background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%);
+            box-shadow: 0 4px 0 #94a3b8, 0 6px 10px rgba(0,0,0,0.15);
+            border: 1px solid #cbd5e1;
+            transition: all 0.06s ease;
+        }
+
+        .front-btn:hover {
+            background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
         }
 
         .front-btn:active {
-            transform: translateY(2px);
-            box-shadow: 0 1px 0 #cbd5e1, 0 2px 3px rgba(0,0,0,0.1);
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #94a3b8, 0 2px 4px rgba(0,0,0,0.15);
         }
 
-        .led-tx { background-color: #ef4444; box-shadow: 0 0 12px #ef4444; }
-        .led-rx { background-color: #22c55e; box-shadow: 0 0 12px #22c55e; }
-        .led-off { background-color: #94a3b8; }
+        /* Status Indicator LEDs with Pulsing Glow */
+        .led-tx { 
+            background-color: #ef4444; 
+            box-shadow: 0 0 14px #ef4444, 0 0 4px #ef4444; 
+            animation: pulse-red 0.8s infinite alternate;
+        }
+        .led-rx { 
+            background-color: #22c55e; 
+            box-shadow: 0 0 14px #22c55e, 0 0 4px #22c55e; 
+            animation: pulse-green 0.8s infinite alternate;
+        }
+        .led-off { 
+            background-color: #64748b; 
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
+        }
+
+        @keyframes pulse-red {
+            from { opacity: 0.7; box-shadow: 0 0 8px #ef4444; }
+            to { opacity: 1.0; box-shadow: 0 0 18px #ef4444, 0 0 6px #f87171; }
+        }
+
+        @keyframes pulse-green {
+            from { opacity: 0.7; box-shadow: 0 0 8px #22c55e; }
+            to { opacity: 1.0; box-shadow: 0 0 18px #22c55e, 0 0 6px #4ade80; }
+        }
+
+        /* Custom Scrollbar for Radio Log */
+        #log-container::-webkit-scrollbar {
+            width: 5px;
+        }
+        #log-container::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 4px;
+        }
+        #log-container::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        #log-container::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-800 min-h-screen flex flex-col items-center justify-center p-3 select-none theme-yellow">
+<body class="text-slate-100 min-h-screen flex flex-col items-center justify-center p-3 select-none theme-yellow">
 
     <!-- Auth Modal -->
-    <div id="auth-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl space-y-4">
-            <div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30 text-2xl">
+    <div id="auth-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-lg z-50 flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-slate-800/95 border border-slate-700/80 rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl space-y-4 relative overflow-hidden">
+            <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 rounded-2xl flex items-center justify-center mx-auto shadow-lg text-2xl font-bold">
                 <i class="fa-solid fa-lock"></i>
             </div>
             <div>
-                <h2 class="text-xl font-bold text-white font-tech">Talkpod Security</h2>
-                <p class="text-slate-400 text-xs mt-1">初回起動時のパスワード入力が必要です</p>
+                <h2 class="text-xl font-bold text-white font-tech tracking-wide">Talkpod Security</h2>
+                <p class="text-slate-400 text-xs mt-1">初回起動時のアクセスパスワードを入力してください</p>
             </div>
             <form id="auth-form" class="space-y-3" onsubmit="handleAuth(event)">
                 <div>
-                    <input type="password" id="auth-pass" placeholder="PASSWORD" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-center text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 text-sm tracking-widest font-mono">
+                    <input type="password" id="auth-pass" placeholder="PASSWORD" class="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-xl text-center text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 text-sm tracking-widest font-mono shadow-inner">
                     <p id="auth-error" class="text-xs text-red-400 mt-1.5 hidden font-tech">パスワードが正しくありません</p>
                 </div>
-                <button type="submit" class="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-bold rounded-xl hover:from-amber-300 hover:to-amber-400 transition shadow-lg text-sm font-tech">
+                <button type="submit" class="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold rounded-xl transition shadow-lg text-sm font-tech active:scale-98">
                     アクセス開始
                 </button>
             </form>
@@ -132,95 +231,100 @@
     </div>
 
     <!-- Audio Unlocked Alert Banner -->
-    <div id="audio-unlock-banner" onclick="unlockAudioContext()" class="fixed top-3 bg-amber-500 text-slate-950 font-tech font-bold text-xs px-4 py-2 rounded-full shadow-lg cursor-pointer animate-bounce z-40 flex items-center gap-2">
-        <i class="fa-solid fa-volume-high"></i>
-        <span>タップして受信音声を有効化（Audio Active）</span>
+    <div id="audio-unlock-banner" onclick="unlockAudioContext()" class="fixed top-3 bg-amber-400 text-slate-950 font-tech font-bold text-xs px-5 py-2.5 rounded-full shadow-2xl cursor-pointer animate-bounce z-40 flex items-center gap-2 border border-amber-300 hover:bg-amber-300 transition">
+        <i class="fa-solid fa-volume-high text-sm"></i>
+        <span>タップして音声受信をアクティブ化 (Click to enable sound)</span>
     </div>
 
     <div class="w-full max-w-sm flex flex-col items-center">
         
+        <!-- Header Controls -->
         <header class="w-full flex justify-between items-center mb-3 px-2 text-xs text-slate-300 font-tech">
-            <div class="flex items-center gap-2">
-                <i class="fa-solid fa-walkie-talkie text-amber-400 text-base"></i>
-                <span class="font-bold tracking-wide">TALKPOD MINI PRO</span>
+            <div class="flex items-center gap-2 bg-slate-800/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/60 shadow-md">
+                <i class="fa-solid fa-walkie-talkie text-amber-400 text-sm animate-pulse"></i>
+                <span class="font-bold tracking-wider text-slate-200">TALKPOD MINI PRO</span>
             </div>
-            <div class="flex items-center gap-1.5 bg-slate-800/80 px-2 py-1 rounded-full border border-slate-700">
-                <button onclick="setTheme('theme-yellow')" class="w-4 h-4 rounded-full bg-amber-400 hover:scale-110 transition border border-white/50" title="Yellow"></button>
-                <button onclick="setTheme('theme-purple')" class="w-4 h-4 rounded-full bg-purple-500 hover:scale-110 transition border border-white/50" title="Purple"></button>
-                <button onclick="setTheme('theme-blue')" class="w-4 h-4 rounded-full bg-sky-400 hover:scale-110 transition border border-white/50" title="Blue"></button>
-                <button onclick="setTheme('theme-pink')" class="w-4 h-4 rounded-full bg-pink-400 hover:scale-110 transition border border-white/50" title="Pink"></button>
+            
+            <div class="flex items-center gap-1.5 bg-slate-800/80 backdrop-blur-md p-1.5 rounded-full border border-slate-700 shadow-md">
+                <button onclick="setTheme('theme-yellow')" class="w-5 h-5 rounded-full bg-amber-400 hover:scale-110 active:scale-95 transition border-2 border-white/80 shadow-sm" title="Yellow"></button>
+                <button onclick="setTheme('theme-purple')" class="w-5 h-5 rounded-full bg-purple-500 hover:scale-110 active:scale-95 transition border-2 border-white/80 shadow-sm" title="Purple"></button>
+                <button onclick="setTheme('theme-blue')" class="w-5 h-5 rounded-full bg-sky-400 hover:scale-110 active:scale-95 transition border-2 border-white/80 shadow-sm" title="Blue"></button>
+                <button onclick="setTheme('theme-pink')" class="w-5 h-5 rounded-full bg-pink-400 hover:scale-110 active:scale-95 transition border-2 border-white/80 shadow-sm" title="Pink"></button>
             </div>
         </header>
 
-        <div class="relative w-72 sm:w-80 walkie-body p-4 pt-1 flex flex-col items-center">
+        <!-- Walkie-Talkie Hardware Device Container -->
+        <div class="relative w-72 sm:w-80 walkie-body p-4 pt-1 flex flex-col items-center my-2">
             
-            <!-- Antenna -->
-            <div class="absolute -top-12 right-10 w-8 h-14 bg-white/90 rounded-t-full border-t-2 border-slate-300 shadow-md flex items-center justify-center">
-                <div class="w-5 h-10 bg-slate-200 rounded-t-full border-t border-slate-300"></div>
+            <!-- Rubber Antenna -->
+            <div class="absolute -top-12 right-10 w-8 h-14 antenna-top rounded-t-full border-t-2 border-slate-300 shadow-xl flex items-center justify-center">
+                <div class="w-5 h-10 antenna-inner rounded-t-full border-t border-slate-300"></div>
             </div>
 
             <!-- Left Textured PTT Side Button -->
-            <button id="side-ptt" class="side-ptt-btn absolute -left-5 top-28 w-6 h-36 rounded-l-2xl flex flex-col items-center justify-center gap-2 cursor-pointer z-20">
-                <div class="w-2.5 h-1.5 bg-slate-300 rounded-full"></div>
-                <div class="w-2.5 h-1.5 bg-slate-300 rounded-full"></div>
-                <div class="w-2.5 h-1.5 bg-slate-300 rounded-full"></div>
-                <div class="w-2.5 h-1.5 bg-slate-300 rounded-full"></div>
-                <div class="w-2.5 h-1.5 bg-slate-300 rounded-full"></div>
-                <div class="w-2.5 h-1.5 bg-slate-300 rounded-full"></div>
+            <button id="side-ptt" class="side-ptt-btn absolute -left-5 top-28 w-6 h-36 rounded-l-2xl flex flex-col items-center justify-center gap-2 cursor-pointer z-20" title="Hold to Talk">
+                <div class="w-2.5 h-1.5 bg-slate-400/80 rounded-full shadow-inner"></div>
+                <div class="w-2.5 h-1.5 bg-slate-400/80 rounded-full shadow-inner"></div>
+                <div class="w-2.5 h-1.5 bg-slate-400/80 rounded-full shadow-inner"></div>
+                <div class="w-2.5 h-1.5 bg-slate-400/80 rounded-full shadow-inner"></div>
+                <div class="w-2.5 h-1.5 bg-slate-400/80 rounded-full shadow-inner"></div>
+                <div class="w-2.5 h-1.5 bg-slate-400/80 rounded-full shadow-inner"></div>
             </button>
 
             <!-- Status Indicator LED -->
             <div class="w-full flex justify-between items-center px-6 pt-2 pb-1">
-                <div id="tx-rx-led" class="w-3.5 h-3.5 rounded-full led-off transition-all mx-auto"></div>
+                <div id="tx-rx-led" class="w-3.5 h-3.5 rounded-full led-off transition-all mx-auto" title="LED Status Indicator"></div>
             </div>
 
-            <div class="w-full face-plate p-4 flex flex-col items-center border border-slate-100">
+            <!-- Faceplate Plastic Enclosure -->
+            <div class="w-full face-plate p-4 flex flex-col items-center border border-slate-200/80">
                 
                 <div class="text-center font-bold tracking-wider text-slate-800 text-lg mb-2 font-tech flex items-center justify-center gap-2">
-                    <span>Talkpod</span>
-                    <span id="client-id-tag" class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-mono">ID:----</span>
+                    <span class="drop-shadow-sm font-extrabold">Talkpod</span>
+                    <span id="client-id-tag" class="text-[10px] bg-slate-200/90 border border-slate-300 text-slate-700 px-1.5 py-0.5 rounded font-mono shadow-inner">ID:----</span>
                 </div>
 
+                <!-- LCD Retro Display Screen -->
                 <div class="w-full lcd-screen rounded-2xl p-2.5 mb-3 flex flex-col justify-between relative overflow-hidden font-lcd">
                     
-                    <div class="flex justify-between items-center text-slate-800 text-sm border-b border-slate-400/40 pb-1 leading-none">
+                    <div class="flex justify-between items-center text-slate-900 text-sm border-b border-slate-600/30 pb-1 leading-none z-10">
                         <div class="flex items-center gap-1.5">
                             <i id="signal-icon" class="fa-solid fa-signal text-xs"></i>
-                            <div class="flex items-center gap-1 bg-slate-400/20 px-1 rounded">
+                            <div class="flex items-center gap-1 bg-slate-700/10 px-1 rounded">
                                 <i id="speaker-icon" class="fa-solid fa-volume-high text-xs"></i>
                                 <span id="lcd-vol" class="text-[11px] font-bold font-tech">V5</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-1">
-                            <span id="net-status-badge" class="text-[10px] font-bold font-tech bg-emerald-700/20 text-emerald-900 px-1 rounded">PEERS: 1</span>
+                            <span id="net-status-badge" class="text-[10px] font-bold font-tech bg-emerald-800/20 text-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800/30">ONLINE: 1</span>
                             <i id="battery-icon" class="fa-solid fa-battery-full text-xs"></i>
                         </div>
                     </div>
 
-                    <!-- Channel & Sub-Code -->
-                    <div class="flex justify-between items-center my-1 px-1">
-                        <div class="flex flex-col text-slate-700">
-                            <span class="text-[10px] font-tech font-bold leading-tight">SUB CODE</span>
+                    <!-- Channel & Sub-Code Numbers -->
+                    <div class="flex justify-between items-center my-1 px-1 z-10">
+                        <div class="flex flex-col text-slate-800">
+                            <span class="text-[10px] font-tech font-bold leading-tight opacity-80">SUB CODE</span>
                             <span id="lcd-subcode" class="text-xl font-bold leading-none">00</span>
                         </div>
 
                         <div class="flex flex-col items-end">
-                            <span id="lcd-setting-label" class="text-[10px] font-tech font-bold leading-tight text-amber-800">CHANNEL</span>
-                            <span id="lcd-channel" class="text-5xl font-black tracking-tight leading-none">01</span>
+                            <span id="lcd-setting-label" class="text-[10px] font-tech font-bold leading-tight text-amber-900">CHANNEL</span>
+                            <span id="lcd-channel" class="text-5xl font-black tracking-tight leading-none text-slate-900 drop-shadow">01</span>
                         </div>
                     </div>
 
-                    <div class="flex justify-between items-center text-[11px] font-tech border-t border-slate-400/40 pt-1 text-slate-700">
-                        <span id="lcd-ch-name" class="font-bold truncate max-w-[130px]">CH 01: GENERAL OPEN</span>
-                        <span id="lcd-mode" class="font-bold bg-slate-400/30 px-1 rounded">MULTI-DEV</span>
+                    <div class="flex justify-between items-center text-[11px] font-tech border-t border-slate-600/30 pt-1 text-slate-800 z-10">
+                        <span id="lcd-ch-name" class="font-bold truncate max-w-[130px]">CH 01: GROUP CH</span>
+                        <span id="lcd-mode" class="font-bold bg-slate-700/15 px-1 rounded">GROUP CH</span>
                     </div>
                 </div>
 
                 <!-- Direct Volume Control Bar -->
-                <div class="w-full flex items-center justify-between bg-slate-100 rounded-xl px-2 py-1 mb-2 border border-slate-200 text-xs font-tech">
-                    <span class="text-slate-500 font-bold text-[10px]">VOLUME</span>
+                <div class="w-full flex items-center justify-between bg-slate-100/90 rounded-xl px-2 py-1 mb-2.5 border border-slate-200 text-xs font-tech shadow-inner">
+                    <span class="text-slate-600 font-bold text-[10px] tracking-wide">VOLUME</span>
                     <div class="flex items-center gap-1">
-                        <button id="btn-vol-down" class="w-7 h-6 bg-slate-200 hover:bg-slate-300 rounded text-slate-700 font-bold active:scale-95 flex items-center justify-center">
+                        <button id="btn-vol-down" class="w-7 h-6 bg-white hover:bg-slate-200 rounded text-slate-800 font-bold active:scale-95 flex items-center justify-center border border-slate-300 shadow-sm transition">
                             <i class="fa-solid fa-minus text-[10px]"></i>
                         </button>
                         <div id="vol-bar-dots" class="flex gap-0.5 px-1">
@@ -233,64 +337,65 @@
                             <div class="w-1.5 h-3 bg-slate-300 rounded-sm"></div>
                             <div class="w-1.5 h-3 bg-slate-300 rounded-sm"></div>
                         </div>
-                        <button id="btn-vol-up" class="w-7 h-6 bg-slate-200 hover:bg-slate-300 rounded text-slate-700 font-bold active:scale-95 flex items-center justify-center">
+                        <button id="btn-vol-up" class="w-7 h-6 bg-white hover:bg-slate-200 rounded text-slate-800 font-bold active:scale-95 flex items-center justify-center border border-slate-300 shadow-sm transition">
                             <i class="fa-solid fa-plus text-[10px]"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- Keypad -->
+                <!-- Front Keypad Buttons -->
                 <div class="w-full grid grid-cols-4 gap-2 my-1">
-                    <button id="btn-menu" class="front-btn h-11 rounded-xl flex flex-col items-center justify-center text-slate-700 text-xs font-bold active:scale-95" title="Menu Mode (CH / VOL)">
+                    <button id="btn-menu" class="front-btn h-11 rounded-xl flex flex-col items-center justify-center text-slate-800 text-xs font-bold active:scale-95" title="Menu Mode (CH / VOL)">
                         <i class="fa-solid fa-bars text-xs"></i>
-                        <span id="menu-mode-tag" class="text-[8px] font-tech text-amber-600 font-bold">CH/VOL</span>
+                        <span id="menu-mode-tag" class="text-[8px] font-tech text-amber-700 font-bold">CH/VOL</span>
                     </button>
 
-                    <button id="btn-up" class="front-btn h-11 rounded-xl flex items-center justify-center text-slate-700 text-base font-black active:scale-95" title="Up">
+                    <button id="btn-up" class="front-btn h-11 rounded-xl flex items-center justify-center text-slate-800 text-base font-black active:scale-95" title="Up">
                         <i class="fa-solid fa-caret-up"></i>
                     </button>
 
-                    <button id="btn-down" class="front-btn h-11 rounded-xl flex items-center justify-center text-slate-700 text-base font-black active:scale-95" title="Down">
+                    <button id="btn-down" class="front-btn h-11 rounded-xl flex items-center justify-center text-slate-800 text-base font-black active:scale-95" title="Down">
                         <i class="fa-solid fa-caret-down"></i>
                     </button>
 
-                    <button id="btn-scan" class="front-btn h-11 rounded-xl flex flex-col items-center justify-center text-slate-700 text-xs font-bold active:scale-95" title="Scan / Lock">
+                    <button id="btn-scan" class="front-btn h-11 rounded-xl flex flex-col items-center justify-center text-slate-800 text-xs font-bold active:scale-95" title="Lock Keypad">
                         <i class="fa-solid fa-arrows-split-up-and-left text-xs"></i>
                         <i id="lock-icon" class="fa-solid fa-lock-open text-[9px] -mt-0.5"></i>
                     </button>
                 </div>
 
                 <!-- Speaker Grille with Canvas Visualizer -->
-                <div class="w-full h-28 speaker-dots rounded-2xl my-2 border border-slate-200/60 relative overflow-hidden flex items-center justify-center">
-                    <canvas id="audio-wave-canvas" class="w-full h-full absolute inset-0 opacity-50 pointer-events-none"></canvas>
-                    <div id="speaker-status" class="text-[10px] font-tech text-slate-600 bg-white/90 px-2.5 py-1 rounded-full font-bold shadow-sm z-10 border border-slate-200 text-center">
-                        HOLD SIDE BUTTON OR SPACE TO TALK
+                <div class="w-full h-28 speaker-dots rounded-2xl my-2 border border-slate-300/80 relative overflow-hidden flex items-center justify-center">
+                    <canvas id="audio-wave-canvas" class="w-full h-full absolute inset-0 opacity-60 pointer-events-none"></canvas>
+                    <div id="speaker-status" class="text-[10px] font-tech text-slate-700 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full font-bold shadow-md z-10 border border-slate-200 text-center">
+                        PRESS SIDE BUTTON OR SPACE TO TALK
                     </div>
                 </div>
 
             </div>
 
             <!-- Mobile Main Touch PTT Banner -->
-            <button id="main-ptt-touch" class="w-full mt-3 py-3 bg-white/20 hover:bg-white/30 rounded-full text-white text-xs font-bold tracking-wider font-tech flex items-center justify-center gap-2 border border-white/30 active:scale-95 transition">
-                <i class="fa-solid fa-microphone text-sm"></i>
+            <button id="main-ptt-touch" class="w-full mt-3 py-3 bg-white/25 hover:bg-white/35 rounded-full text-white text-xs font-bold tracking-wider font-tech flex items-center justify-center gap-2 border border-white/40 active:scale-95 transition shadow-lg backdrop-blur-sm">
+                <i class="fa-solid fa-microphone text-sm animate-pulse"></i>
                 <span>HOLD SIDE / TAP HERE TO TALK</span>
             </button>
 
         </div>
 
-        <div class="w-full mt-4 bg-slate-800/90 border border-slate-700 rounded-2xl p-3 shadow-xl">
+        <!-- Communication & Log Control Dashboard -->
+        <div class="w-full mt-3 bg-slate-800/80 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-2xl">
             <!-- Direct Peer Connect Input Bar -->
-            <div class="mb-2 pb-2 border-b border-slate-700 flex items-center justify-between gap-2 text-xs font-tech">
+            <div class="mb-2.5 pb-2 border-b border-slate-700/80 flex items-center justify-between gap-2 text-xs font-tech">
                 <span class="text-slate-400 font-bold shrink-0">手動ID接続:</span>
-                <input type="text" id="target-peer-id" placeholder="TALK-1234" class="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-amber-400 font-mono text-center focus:outline-none uppercase">
-                <button onclick="manualConnectPeer()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1 rounded font-bold transition shrink-0">
+                <input type="text" id="target-peer-id" placeholder="TALK-1234" class="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-amber-400 font-mono text-center focus:outline-none uppercase text-xs">
+                <button onclick="manualConnectPeer()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 px-3 py-1 rounded font-bold transition shrink-0 shadow-sm">
                     接続
                 </button>
             </div>
 
-            <div class="flex justify-between items-center mb-2 pb-1 border-b border-slate-700 text-xs font-tech">
-                <div class="flex items-center gap-1.5">
-                    <span class="text-slate-300 font-bold flex items-center gap-1">
+            <div class="flex justify-between items-center mb-2 pb-1 border-b border-slate-700/80 text-xs font-tech">
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-200 font-bold flex items-center gap-1.5">
                         <i class="fa-solid fa-comments text-amber-400"></i>
                         RADIO LOG
                     </span>
@@ -302,7 +407,7 @@
                 
                 <div class="flex items-center gap-1.5">
                     <!-- Self Loopback Test Toggle -->
-                    <button id="btn-loopback-toggle" onclick="toggleSelfLoopback()" class="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-600 transition" title="1デバイスの1画面内で自分の声の受信用テスト">
+                    <button id="btn-loopback-toggle" onclick="toggleSelfLoopback()" class="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-600 transition" title="1画面内で自分の声の受信用テスト">
                         セルフ: OFF
                     </button>
                     <button id="btn-clear-log" class="text-slate-400 hover:text-slate-200 text-[11px] underline">Clear</button>
@@ -313,7 +418,7 @@
             </div>
             
             <div id="log-container" class="h-28 overflow-y-auto space-y-1.5 text-xs font-tech text-slate-300 pr-1">
-                <div class="text-slate-400 italic text-[11px]">全24チャンネルグループ通話対応。同じチャンネルを選んだ全員と同時通話できます。</div>
+                <div class="text-slate-400 italic text-[11px]">全24チャンネル対応。複数タブまたは別端末で同じチャンネルを選ぶと同時に音声会話が届きます。</div>
             </div>
         </div>
 
@@ -324,23 +429,24 @@
     </div>
 
     <script>
-        const CHANNELS = [
-            { id: 1, sub: "00", name: "CH 01: GENERAL OPEN", mode: "MULTI-DEV" },
-            { id: 2, sub: "05", name: "CH 02: BASE DISPATCH", mode: "MULTI-DEV" },
-            { id: 3, sub: "01", name: "CH 03: TEAM ALPHA", mode: "MULTI-DEV" },
-            { id: 4, sub: "12", name: "CH 04: TEAM BRAVO", mode: "MULTI-DEV" },
-            { id: 5, sub: "18", name: "CH 05: EMERGENCY REPT", mode: "MULTI-DEV" },
-            { id: 6, sub: "24", name: "CH 06: HIKE ROUTE 1", mode: "MULTI-DEV" },
-            { id: 7, sub: "38", name: "CH 07: HIKE ROUTE 2", mode: "MULTI-DEV" },
-            { id: 8, sub: "01", name: "CH 08: MOUNTAIN RELAY", mode: "MULTI-DEV" }
-        ];
+        // Full 24 Channels Configuration
+        const CHANNELS = [];
+        for (let i = 1; i <= 24; i++) {
+            const chNum = i < 10 ? '0' + i : '' + i;
+            const subCode = (i * 7) % 39 < 10 ? '0' + ((i * 7) % 39) : '' + ((i * 7) % 39);
+            CHANNELS.push({
+                id: i,
+                sub: subCode,
+                name: `CH ${chNum}: GROUP CHANNEL`,
+                mode: "GROUP CH"
+            });
+        }
 
         let currentChannelIdx = 0;
         let currentVolume = 5; // 0 to 8
         let controlMode = 'CH'; // 'CH' or 'VOL'
         let isTransmitting = false;
         let isReceiving = false;
-        let pendingStop = false;
         let isKeyLocked = false;
         let selfLoopback = false; // Self echo test mode
         let myClientId = 'TALK-' + Math.floor(1000 + Math.random() * 9000);
@@ -353,19 +459,20 @@
         let analyser = null;
         let mediaRecorder = null;
         let audioChunks = [];
+        let isMicReady = false;
 
-        // Network Channels
+        // Multi-Tab & Multi-Device Connections
         let broadcastChan = null;
         let peer = null;
         let activePeerConnections = [];
-        let isChannelHost = false;
-        let currentRoomHostConnection = null;
+        let onlineCount = 1;
 
         function checkAuth() {
             const isAuth = localStorage.getItem('talkpod_auth');
             const modal = document.getElementById('auth-modal');
             if (isAuth === 'true') {
                 if (modal) modal.classList.add('hidden');
+                initAudioContext();
             } else {
                 if (modal) modal.classList.remove('hidden');
             }
@@ -393,10 +500,10 @@
         }
 
         function setTheme(themeName) {
-            document.body.className = `bg-slate-900 text-slate-800 min-h-screen flex flex-col items-center justify-center p-3 select-none ${themeName}`;
+            document.body.className = `text-slate-100 min-h-screen flex flex-col items-center justify-center p-3 select-none ${themeName}`;
         }
 
-        function initAudioContext() {
+        async function initAudioContext() {
             if (audioCtx) {
                 if (audioCtx.state === 'suspended') {
                     audioCtx.resume();
@@ -415,20 +522,46 @@
                 analyser = audioCtx.createAnalyser();
                 analyser.fftSize = 64;
 
-                // BroadcastChannel for same-browser tabs
+                // Setup BroadcastChannel for Instant Multi-Tab Communication
                 try {
-                    broadcastChan = new BroadcastChannel('talkpod_radio_network_v5');
+                    broadcastChan = new BroadcastChannel('talkpod_radio_network_v24');
                     broadcastChan.onmessage = handleIncomingBroadcast;
                 } catch (err) {
                     console.warn('BroadcastChannel not supported', err);
                 }
 
-                // PeerJS for cross-device network communication
+                // Setup PeerJS for Multi-Device Communication
                 initPeerConnection();
 
                 document.getElementById('client-id-tag').innerText = `ID:${myClientId}`;
+
+                // Pre-request Mic Stream so PTT starts instantly with 0 latency
+                requestMicAccess();
             } catch (err) {
                 console.error('Failed to initialize AudioContext:', err);
+            }
+        }
+
+        async function requestMicAccess() {
+            if (isMicReady && micStream) return true;
+            try {
+                micStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                if (audioCtx && micStream) {
+                    micSource = audioCtx.createMediaStreamSource(micStream);
+                    micSource.connect(analyser);
+                    isMicReady = true;
+                }
+                return true;
+            } catch (err) {
+                console.warn('Microphone permission delayed or unavailable:', err);
+                isMicReady = false;
+                return false;
             }
         }
 
@@ -438,9 +571,8 @@
                 peer = new Peer(myClientId);
 
                 peer.on('open', (id) => {
-                    updatePeerBadgeCount();
-                    addLog(`[P2Pネット] 自分の端末ID: ${id}`, 'sys');
-                    autoConnectChannelRoom();
+                    updateOnlineBadgeCount();
+                    addLog(`[ネット参加] 端末ID: ${id}`, 'sys');
                 });
 
                 peer.on('connection', (conn) => {
@@ -448,11 +580,7 @@
                 });
 
                 peer.on('error', (err) => {
-                    if (err.type === 'unavailable-id') {
-                        // ID taken means channel room host already exists
-                    } else {
-                        console.warn('PeerJS Notice:', err.type);
-                    }
+                    console.warn('PeerJS Notice:', err.type);
                 });
             } catch (e) {
                 console.warn('PeerJS init failed:', e);
@@ -463,8 +591,8 @@
             conn.on('open', () => {
                 if (!activePeerConnections.some(c => c.peer === conn.peer)) {
                     activePeerConnections.push(conn);
-                    updatePeerBadgeCount();
-                    addLog(`[グループ接続] 端末 ${conn.peer} が参加しました`, 'sys');
+                    updateOnlineBadgeCount();
+                    addLog(`[グループ接続] 端末 ${conn.peer} と通信確立`, 'sys');
                 }
             });
 
@@ -474,20 +602,16 @@
 
             conn.on('close', () => {
                 activePeerConnections = activePeerConnections.filter(c => c.peer !== conn.peer);
-                updatePeerBadgeCount();
-                addLog(`[グループ退出] 端末 ${conn.peer} が退室しました`, 'sys');
-            });
-
-            conn.on('error', (err) => {
-                console.warn('Conn Error:', err);
+                updateOnlineBadgeCount();
+                addLog(`[グループ切断] 端末 ${conn.peer} が退出しました`, 'sys');
             });
         }
 
-        function updatePeerBadgeCount() {
+        function updateOnlineBadgeCount() {
             const badge = document.getElementById('net-status-badge');
             if (badge) {
-                const totalOnline = activePeerConnections.length + 1;
-                badge.innerText = `PEERS: ${totalOnline}`;
+                onlineCount = activePeerConnections.length + 1;
+                badge.innerText = `ONLINE: ${onlineCount}`;
             }
         }
 
@@ -506,53 +630,11 @@
 
         function connectToRemotePeer(targetId) {
             if (!peer || peer.destroyed) return;
-            if (activePeerConnections.some(c => c.peer === targetId)) {
-                return;
-            }
+            if (activePeerConnections.some(c => c.peer === targetId)) return;
 
-            addLog(`[グループ接続試行] 端末 ${targetId} へ接続中...`, 'sys');
+            addLog(`[接続中...] 端末 ${targetId} へ接続試行中`, 'sys');
             const conn = peer.connect(targetId, { reliable: true });
             setupPeerConnection(conn);
-        }
-
-        function autoConnectChannelRoom() {
-            // Close old room connections
-            activePeerConnections.forEach(conn => conn.close());
-            activePeerConnections = [];
-            updatePeerBadgeCount();
-
-            const ch = CHANNELS[currentChannelIdx];
-            const roomHostId = `TALKPOD-CHANNEL-ROOM-${ch.id}-NET-PRO`;
-
-            if (myClientId === roomHostId) return;
-
-            // Try connecting to Channel Room Host
-            const roomConn = peer.connect(roomHostId, { reliable: true });
-            
-            roomConn.on('open', () => {
-                currentRoomHostConnection = roomConn;
-                if (!activePeerConnections.some(c => c.peer === roomConn.peer)) {
-                    activePeerConnections.push(roomConn);
-                }
-                updatePeerBadgeCount();
-                addLog(`[CH ${ch.id}] グループチャンネルに参加しました`, 'sys');
-            });
-
-            roomConn.on('data', (data) => {
-                handleIncomingBroadcast({ data: data, fromPeerConn: roomConn });
-            });
-
-            roomConn.on('error', () => {
-                // If room host doesn't exist, create room host with channel deterministic ID
-                try {
-                    const hostPeer = new Peer(roomHostId);
-                    hostPeer.on('open', () => {
-                        isChannelHost = true;
-                        addLog(`[CH ${ch.id}] あなたがグループホストに割り当てられました`, 'sys');
-                    });
-                    hostPeer.on('connection', (c) => setupPeerConnection(c));
-                } catch(e) {}
-            });
         }
 
         function sendToPeers(payload) {
@@ -562,9 +644,7 @@
                     try {
                         conn.send(payload);
                         sentCount++;
-                    } catch (e) {
-                        console.warn('P2P Send Fail:', e);
-                    }
+                    } catch (e) {}
                 }
             });
             return sentCount;
@@ -583,26 +663,6 @@
             }
         }
 
-        async function requestMicAccess() {
-            unlockAudioContext();
-            try {
-                if (!micStream) {
-                    micStream = await navigator.mediaDevices.getUserMedia({ 
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        } 
-                    });
-                }
-                return true;
-            } catch (err) {
-                console.warn('Microphone permission missing:', err);
-                return false;
-            }
-        }
-
-        // Converts Float32 Array PCM samples to Universal WAV Blob
         function createWavBlobFromAudioBuffer(audioBuffer) {
             const numChannels = 1;
             const sampleRate = audioBuffer.sampleRate;
@@ -617,31 +677,18 @@
                 }
             };
 
-            /* RIFF identifier */
             writeString(view, 0, 'RIFF');
-            /* RIFF chunk length */
             view.setUint32(4, 36 + samples.length * 2, true);
-            /* RIFF type */
             writeString(view, 8, 'WAVE');
-            /* format chunk identifier */
             writeString(view, 12, 'fmt ');
-            /* format chunk length */
             view.setUint32(16, 16, true);
-            /* sample format (PCM 16-bit) */
             view.setUint16(20, 1, true);
-            /* channel count (mono) */
             view.setUint16(22, numChannels, true);
-            /* sample rate */
             view.setUint32(24, sampleRate, true);
-            /* byte rate */
             view.setUint32(28, sampleRate * 2, true);
-            /* block align */
             view.setUint16(32, 2, true);
-            /* bits per sample */
             view.setUint16(34, 16, true);
-            /* data chunk identifier */
             writeString(view, 36, 'data');
-            /* data chunk length */
             view.setUint32(40, samples.length * 2, true);
 
             let offset = 44;
@@ -658,13 +705,13 @@
             playKeyClickSound();
             const btn = document.getElementById('btn-loopback-toggle');
             if (selfLoopback) {
-                btn.className = 'bg-amber-500 text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded border border-amber-400 hover:bg-amber-400 transition animate-pulse';
+                btn.className = 'bg-amber-400 text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded border border-amber-300 hover:bg-amber-300 transition animate-pulse shadow-sm';
                 btn.innerText = 'セルフ: ON';
-                addLog('セルフテストモードON (1デバイスで送信した声を自分で受信再生)', 'sys');
+                addLog('セルフテストモードON (自分の声を自分のスピーカーで確認)', 'sys');
             } else {
                 btn.className = 'bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-600 transition';
                 btn.innerText = 'セルフ: OFF';
-                addLog('セルフテストモードOFF (複数端末/2タブ間での受信用)', 'sys');
+                addLog('セルフテストモードOFF (他タブ・他端末への通信用)', 'sys');
             }
         }
 
@@ -679,7 +726,6 @@
             if (isKeyLocked) return;
             playKeyClickSound();
             currentVolume = Math.max(0, Math.min(8, currentVolume + delta));
-            
             updateVolumeGain();
             updateVolumeDisplay();
             addLog(`音量設定: VOL ${currentVolume}`, 'sys');
@@ -705,7 +751,7 @@
             if (dots) {
                 for (let i = 0; i < dots.length; i++) {
                     if (i < currentVolume) {
-                        dots[i].className = 'w-1.5 h-3 bg-amber-500 rounded-sm';
+                        dots[i].className = 'w-1.5 h-3 bg-amber-500 rounded-sm shadow-xs';
                     } else {
                         dots[i].className = 'w-1.5 h-3 bg-slate-300 rounded-sm';
                     }
@@ -728,13 +774,12 @@
                 addLog('操作モード: 音量調整 (▲▼でVOL変更)', 'sys');
             } else {
                 label.innerText = 'CHANNEL';
-                label.className = 'text-[10px] font-tech font-bold leading-tight text-amber-800';
+                label.className = 'text-[10px] font-tech font-bold leading-tight text-amber-900';
                 modeTag.innerText = 'CH/VOL';
                 addLog('操作モード: チャンネル切替 (▲▼でCH変更)', 'sys');
             }
         }
 
-        // Direct Audio Sound Test (Tests speaker reception instantly)
         function testReceiveAudioSound() {
             unlockAudioContext();
             addLog('🔊 受信サウンドテスト実行中...', 'rx');
@@ -743,8 +788,6 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
             const now = audioCtx.currentTime;
-            
-            // Play double-beep radio burst
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
@@ -763,7 +806,7 @@
 
             setTimeout(() => {
                 playRogerBeep();
-                addLog('✅ スピーカー出力テスト成功 (音声は正常に出力可能です)', 'sys');
+                addLog('✅ スピーカー出力正常です', 'sys');
             }, 350);
         }
 
@@ -819,53 +862,30 @@
             unlockAudioContext();
 
             isTransmitting = true;
-            pendingStop = false;
             audioChunks = [];
 
-            // UI Updates
+            // Dynamic UI Transmission Glow Updates
             document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-tx transition-all mx-auto';
             document.getElementById('side-ptt').classList.add('active');
             document.getElementById('speaker-status').innerText = 'TRANSMITTING... (SPEAK NOW)';
-            document.getElementById('speaker-status').className = 'text-[10px] font-tech text-red-600 bg-red-100 px-2.5 py-1 rounded-full font-bold shadow-sm z-10 border border-red-300 animate-pulse';
+            document.getElementById('speaker-status').className = 'text-[10px] font-tech text-red-600 bg-red-100 px-3 py-1 rounded-full font-bold shadow-md z-10 border border-red-300 animate-pulse';
 
             const hasMic = await requestMicAccess();
 
-            if (pendingStop) {
-                finishStopTransmission();
-                return;
-            }
-
             if (hasMic && micStream) {
                 try {
-                    if (!micSource && audioCtx) {
-                        micSource = audioCtx.createMediaStreamSource(micStream);
-                        micSource.connect(analyser);
-                    }
-
                     mediaRecorder = new MediaRecorder(micStream);
-                    
                     mediaRecorder.ondataavailable = (e) => {
                         if (e.data && e.data.size > 0) audioChunks.push(e.data);
                     };
-
                     mediaRecorder.start(40);
-
-                    if (pendingStop) {
-                        finishStopTransmission();
-                    }
                 } catch (err) {
-                    console.error('MediaRecorder error:', err);
+                    console.warn('MediaRecorder init error:', err);
                 }
             }
         }
 
         function stopTransmission() {
-            if (!isTransmitting) return;
-            pendingStop = true;
-            finishStopTransmission();
-        }
-
-        function finishStopTransmission() {
             if (!isTransmitting) return;
             isTransmitting = false;
 
@@ -873,7 +893,7 @@
             document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-off transition-all mx-auto';
             document.getElementById('side-ptt').classList.remove('active');
             document.getElementById('speaker-status').innerText = 'HOLD SIDE BUTTON OR SPACE TO TALK';
-            document.getElementById('speaker-status').className = 'text-[10px] font-tech text-slate-600 bg-white/90 px-2.5 py-1 rounded-full font-bold shadow-sm z-10 border border-slate-200';
+            document.getElementById('speaker-status').className = 'text-[10px] font-tech text-slate-700 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full font-bold shadow-md z-10 border border-slate-200';
 
             playRogerBeep();
 
@@ -883,9 +903,8 @@
                 mediaRecorder.onstop = async () => {
                     const rawBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
                     
-                    if (rawBlob.size > 100) {
+                    if (rawBlob.size > 200 && audioCtx) {
                         try {
-                            // Decode to PCM & re-encode into Universal WAV format
                             const rawBuffer = await rawBlob.arrayBuffer();
                             const decodedAudioBuffer = await audioCtx.decodeAudioData(rawBuffer);
                             const wavBlob = createWavBlobFromAudioBuffer(decodedAudioBuffer);
@@ -902,22 +921,18 @@
                                 };
 
                                 // Broadcast to same-browser tabs
-                                if (broadcastChan) {
-                                    broadcastChan.postMessage(payload);
-                                }
+                                if (broadcastChan) broadcastChan.postMessage(payload);
 
                                 // Send to all connected P2P devices
                                 const peerCount = sendToPeers(payload);
-                                addLog(`[CH ${activeCh.id}] 音声送信完了 (${Math.round(wavBlob.size/1024)}KB) -> 接続P2P:${peerCount}台`, 'tx');
+                                addLog(`[CH ${activeCh.id}] 音声送信完了 (${Math.round(wavBlob.size/1024)}KB) -> 宛先:${peerCount}台`, 'tx');
 
-                                // Loopback / self-test execution
                                 if (selfLoopback) {
                                     handleIncomingBroadcast({ data: payload, isLoopback: true });
                                 }
                             };
                             reader.readAsDataURL(wavBlob);
                         } catch (convErr) {
-                            console.warn('WAV Conversion fallback:', convErr);
                             sendFallbackSignal(activeCh);
                         }
                     } else {
@@ -936,11 +951,9 @@
                 channelId: activeCh.id,
                 sender: myClientId
             };
-            if (broadcastChan) {
-                broadcastChan.postMessage(payload);
-            }
+            if (broadcastChan) broadcastChan.postMessage(payload);
             const peerCount = sendToPeers(payload);
-            addLog(`[CH ${activeCh.id}] テスト信号送信完了 -> 接続P2P:${peerCount}台`, 'tx');
+            addLog(`[CH ${activeCh.id}] コール信号送信完了 -> 宛先:${peerCount}台`, 'tx');
 
             if (selfLoopback) {
                 handleIncomingBroadcast({ data: payload, isLoopback: true });
@@ -954,13 +967,12 @@
 
             const activeCh = CHANNELS[currentChannelIdx];
 
-            // CHANNEL CHECK
+            // CHANNEL CHECK - Ignore if on a different channel
             if (data.channelId !== activeCh.id) {
-                addLog(`[別CH無視] CH ${data.channelId} の通信をスルー`, 'sys');
                 return;
             }
 
-            // If I am channel host or connected peer, relay to all other connected peers in multi-user group
+            // Relay message to other peer connections if from peer
             if (event.fromPeerConn) {
                 activePeerConnections.forEach(conn => {
                     if (conn.peer !== event.fromPeerConn.peer && conn.peer !== data.sender && conn.open) {
@@ -973,13 +985,13 @@
             document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-rx transition-all mx-auto';
             isReceiving = true;
 
+            const senderTag = event.isLoopback ? '自分(テスト)' : `端末 ${data.sender}`;
+
             if (data.type === 'RADIO_VOICE_STREAM' && data.audioDataUrl) {
-                const senderTag = event.isLoopback ? '自分(テスト)' : `端末 ${data.sender}`;
-                addLog(`[CH ${activeCh.id}] ${senderTag} からのグループ音声を受信再生`, 'rx');
+                addLog(`[CH ${activeCh.id}] ${senderTag} から音声を受信再生`, 'rx');
                 await playVoiceDataUrl(data.audioDataUrl);
             } else if (data.type === 'RADIO_TEST_SIGNAL') {
-                const senderTag = event.isLoopback ? '自分(テスト)' : `端末 ${data.sender}`;
-                addLog(`[CH ${activeCh.id}] ${senderTag} からテスト信号を受信`, 'rx');
+                addLog(`[CH ${activeCh.id}] ${senderTag} からコール信号を受信`, 'rx');
                 playSynthesizedBeepSpeech();
             }
 
@@ -994,7 +1006,6 @@
             if (audioCtx.state === 'suspended') await audioCtx.resume();
 
             try {
-                // Convert Universal WAV DataURL to AudioBuffer
                 const res = await fetch(dataUrl);
                 const arrayBuffer = await res.arrayBuffer();
                 
@@ -1002,14 +1013,14 @@
                 const source = audioCtx.createBufferSource();
                 source.buffer = audioBuffer;
 
-                // Authentic Walkie-Talkie Bandpass Filter
+                // Walkie-Talkie Bandpass Filter
                 const bandpassLow = audioCtx.createBiquadFilter();
                 bandpassLow.type = 'highpass';
-                bandpassLow.frequency.value = 320; // Highpass filter
+                bandpassLow.frequency.value = 320;
 
                 const bandpassHigh = audioCtx.createBiquadFilter();
                 bandpassHigh.type = 'lowpass';
-                bandpassHigh.frequency.value = 3000; // Walkie-talkie voice band limit
+                bandpassHigh.frequency.value = 3000;
 
                 source.connect(bandpassLow);
                 bandpassLow.connect(bandpassHigh);
@@ -1021,7 +1032,6 @@
 
                 source.start(0);
             } catch (err) {
-                console.error('Radio voice decoding error:', err);
                 playSynthesizedBeepSpeech();
             }
         }
@@ -1062,7 +1072,6 @@
             currentChannelIdx = (currentChannelIdx + delta + CHANNELS.length) % CHANNELS.length;
             updateChannelDisplay();
             addLog(`チャンネル切替: ${CHANNELS[currentChannelIdx].name}`, 'sys');
-            autoConnectChannelRoom();
         }
 
         function toggleLock() {
@@ -1084,18 +1093,19 @@
             const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
             let badgeClass = "bg-slate-700 text-slate-300";
-            if (type === 'tx') badgeClass = "bg-amber-500/20 text-amber-400 border border-amber-500/30";
-            if (type === 'rx') badgeClass = "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-            if (type === 'sys') badgeClass = "bg-slate-700/60 text-slate-400";
+            if (type === 'tx') badgeClass = "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs";
+            if (type === 'rx') badgeClass = "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs";
+            if (type === 'sys') badgeClass = "bg-slate-700/60 text-slate-400 border border-slate-600/30";
 
             entry.className = `flex items-start gap-2 text-[11px] font-tech`;
             entry.innerHTML = `<span class="text-slate-500 font-mono text-[10px] shrink-0 pt-0.5">[${timeStr}]</span>
-                               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeClass} break-all">${msg}</span>`;
+                               <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass} break-all">${msg}</span>`;
             
             logContainer.appendChild(entry);
             logContainer.scrollTop = logContainer.scrollHeight;
         }
 
+        // Audio Wave visualizer canvas renderer
         function startVisualizer() {
             const canvas = document.getElementById('audio-wave-canvas');
             const ctx = canvas.getContext('2d');
@@ -1134,7 +1144,7 @@
                     ctx.stroke();
                 } else {
                     ctx.beginPath();
-                    ctx.strokeStyle = 'rgba(51, 65, 85, 0.2)';
+                    ctx.strokeStyle = 'rgba(100, 116, 139, 0.25)';
                     ctx.lineWidth = 1.5;
                     const time = Date.now() * 0.003;
                     for (let x = 0; x < canvas.width; x += 5) {
