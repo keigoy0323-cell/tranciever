@@ -192,7 +192,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1">
-                            <span id="net-status-badge" class="text-[10px] font-bold font-tech bg-emerald-700/20 text-emerald-900 px-1 rounded">P2P ON</span>
+                            <span id="net-status-badge" class="text-[10px] font-bold font-tech bg-emerald-700/20 text-emerald-900 px-1 rounded">PEERS: 1</span>
                             <i id="battery-icon" class="fa-solid fa-battery-full text-xs"></i>
                         </div>
                     </div>
@@ -279,6 +279,15 @@
         </div>
 
         <div class="w-full mt-4 bg-slate-800/90 border border-slate-700 rounded-2xl p-3 shadow-xl">
+            <!-- Direct Peer Connect Input Bar -->
+            <div class="mb-2 pb-2 border-b border-slate-700 flex items-center justify-between gap-2 text-xs font-tech">
+                <span class="text-slate-400 font-bold shrink-0">手動ID接続:</span>
+                <input type="text" id="target-peer-id" placeholder="TALK-1234" class="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-amber-400 font-mono text-center focus:outline-none uppercase">
+                <button onclick="manualConnectPeer()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1 rounded font-bold transition shrink-0">
+                    接続
+                </button>
+            </div>
+
             <div class="flex justify-between items-center mb-2 pb-1 border-b border-slate-700 text-xs font-tech">
                 <div class="flex items-center gap-1.5">
                     <span class="text-slate-300 font-bold flex items-center gap-1">
@@ -304,7 +313,7 @@
             </div>
             
             <div id="log-container" class="h-28 overflow-y-auto space-y-1.5 text-xs font-tech text-slate-300 pr-1">
-                <div class="text-slate-400 italic text-[11px]">ラジオ準備完了。「受信テスト」を押すとスピーカー音を確認できます。別端末同士はPeerJSで自動同期されます。</div>
+                <div class="text-slate-400 italic text-[11px]">全24チャンネルグループ通話対応。同じチャンネルを選んだ全員と同時通話できます。</div>
             </div>
         </div>
 
@@ -349,6 +358,8 @@
         let broadcastChan = null;
         let peer = null;
         let activePeerConnections = [];
+        let isChannelHost = false;
+        let currentRoomHostConnection = null;
 
         function checkAuth() {
             const isAuth = localStorage.getItem('talkpod_auth');
@@ -424,28 +435,139 @@
         function initPeerConnection() {
             if (typeof Peer === 'undefined') return;
             try {
-                // Room prefix based on channel
-                const currentCh = CHANNELS[currentChannelIdx].id;
-                peer = new Peer(`${myClientId}`);
+                peer = new Peer(myClientId);
 
                 peer.on('open', (id) => {
-                    const badge = document.getElementById('net-status-badge');
-                    if (badge) badge.innerText = "NET READY";
-                    addLog(`[P2Pネット] 端末ID登録完了: ${id}`, 'sys');
+                    updatePeerBadgeCount();
+                    addLog(`[P2Pネット] 自分の端末ID: ${id}`, 'sys');
+                    autoConnectChannelRoom();
                 });
 
                 peer.on('connection', (conn) => {
-                    conn.on('data', (data) => {
-                        handleIncomingBroadcast({ data: data });
-                    });
+                    setupPeerConnection(conn);
                 });
 
                 peer.on('error', (err) => {
-                    console.warn('PeerJS Notice:', err.type);
+                    if (err.type === 'unavailable-id') {
+                        // ID taken means channel room host already exists
+                    } else {
+                        console.warn('PeerJS Notice:', err.type);
+                    }
                 });
             } catch (e) {
                 console.warn('PeerJS init failed:', e);
             }
+        }
+
+        function setupPeerConnection(conn) {
+            conn.on('open', () => {
+                if (!activePeerConnections.some(c => c.peer === conn.peer)) {
+                    activePeerConnections.push(conn);
+                    updatePeerBadgeCount();
+                    addLog(`[グループ接続] 端末 ${conn.peer} が参加しました`, 'sys');
+                }
+            });
+
+            conn.on('data', (data) => {
+                handleIncomingBroadcast({ data: data, fromPeerConn: conn });
+            });
+
+            conn.on('close', () => {
+                activePeerConnections = activePeerConnections.filter(c => c.peer !== conn.peer);
+                updatePeerBadgeCount();
+                addLog(`[グループ退出] 端末 ${conn.peer} が退室しました`, 'sys');
+            });
+
+            conn.on('error', (err) => {
+                console.warn('Conn Error:', err);
+            });
+        }
+
+        function updatePeerBadgeCount() {
+            const badge = document.getElementById('net-status-badge');
+            if (badge) {
+                const totalOnline = activePeerConnections.length + 1;
+                badge.innerText = `PEERS: ${totalOnline}`;
+            }
+        }
+
+        function manualConnectPeer() {
+            const input = document.getElementById('target-peer-id');
+            if (!input) return;
+            const targetId = input.value.trim().toUpperCase();
+            if (!targetId) return;
+            if (targetId === myClientId) {
+                addLog('自分のIDには接続できません', 'sys');
+                return;
+            }
+            connectToRemotePeer(targetId);
+            input.value = '';
+        }
+
+        function connectToRemotePeer(targetId) {
+            if (!peer || peer.destroyed) return;
+            if (activePeerConnections.some(c => c.peer === targetId)) {
+                return;
+            }
+
+            addLog(`[グループ接続試行] 端末 ${targetId} へ接続中...`, 'sys');
+            const conn = peer.connect(targetId, { reliable: true });
+            setupPeerConnection(conn);
+        }
+
+        function autoConnectChannelRoom() {
+            // Close old room connections
+            activePeerConnections.forEach(conn => conn.close());
+            activePeerConnections = [];
+            updatePeerBadgeCount();
+
+            const ch = CHANNELS[currentChannelIdx];
+            const roomHostId = `TALKPOD-CHANNEL-ROOM-${ch.id}-NET-PRO`;
+
+            if (myClientId === roomHostId) return;
+
+            // Try connecting to Channel Room Host
+            const roomConn = peer.connect(roomHostId, { reliable: true });
+            
+            roomConn.on('open', () => {
+                currentRoomHostConnection = roomConn;
+                if (!activePeerConnections.some(c => c.peer === roomConn.peer)) {
+                    activePeerConnections.push(roomConn);
+                }
+                updatePeerBadgeCount();
+                addLog(`[CH ${ch.id}] グループチャンネルに参加しました`, 'sys');
+            });
+
+            roomConn.on('data', (data) => {
+                handleIncomingBroadcast({ data: data, fromPeerConn: roomConn });
+            });
+
+            roomConn.on('error', () => {
+                // If room host doesn't exist, create room host with channel deterministic ID
+                try {
+                    const hostPeer = new Peer(roomHostId);
+                    hostPeer.on('open', () => {
+                        isChannelHost = true;
+                        addLog(`[CH ${ch.id}] あなたがグループホストに割り当てられました`, 'sys');
+                    });
+                    hostPeer.on('connection', (c) => setupPeerConnection(c));
+                } catch(e) {}
+            });
+        }
+
+        function sendToPeers(payload) {
+            let sentCount = 0;
+            activePeerConnections.forEach(conn => {
+                if (conn && conn.open) {
+                    try {
+                        conn.send(payload);
+                        sentCount++;
+                    } catch (e) {
+                        console.warn('P2P Send Fail:', e);
+                    }
+                }
+            });
+            return sentCount;
         }
 
         function unlockAudioContext() {
@@ -771,7 +893,6 @@
                             const reader = new FileReader();
                             reader.onloadend = () => {
                                 const base64WavAudio = reader.result;
-                                addLog(`[CH ${activeCh.id}] 音声送信完了 (${Math.round(wavBlob.size/1024)}KB Universal WAV)`, 'tx');
 
                                 const payload = {
                                     type: 'RADIO_VOICE_STREAM',
@@ -784,6 +905,10 @@
                                 if (broadcastChan) {
                                     broadcastChan.postMessage(payload);
                                 }
+
+                                // Send to all connected P2P devices
+                                const peerCount = sendToPeers(payload);
+                                addLog(`[CH ${activeCh.id}] 音声送信完了 (${Math.round(wavBlob.size/1024)}KB) -> 接続P2P:${peerCount}台`, 'tx');
 
                                 // Loopback / self-test execution
                                 if (selfLoopback) {
@@ -806,7 +931,6 @@
         }
 
         function sendFallbackSignal(activeCh) {
-            addLog(`[CH ${activeCh.id}] テスト信号送信完了`, 'tx');
             const payload = {
                 type: 'RADIO_TEST_SIGNAL',
                 channelId: activeCh.id,
@@ -815,6 +939,9 @@
             if (broadcastChan) {
                 broadcastChan.postMessage(payload);
             }
+            const peerCount = sendToPeers(payload);
+            addLog(`[CH ${activeCh.id}] テスト信号送信完了 -> 接続P2P:${peerCount}台`, 'tx');
+
             if (selfLoopback) {
                 handleIncomingBroadcast({ data: payload, isLoopback: true });
             }
@@ -833,13 +960,22 @@
                 return;
             }
 
+            // If I am channel host or connected peer, relay to all other connected peers in multi-user group
+            if (event.fromPeerConn) {
+                activePeerConnections.forEach(conn => {
+                    if (conn.peer !== event.fromPeerConn.peer && conn.peer !== data.sender && conn.open) {
+                        try { conn.send(data); } catch(e){}
+                    }
+                });
+            }
+
             // MATCHED CHANNEL - RECEIVE VOICE
             document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-rx transition-all mx-auto';
             isReceiving = true;
 
             if (data.type === 'RADIO_VOICE_STREAM' && data.audioDataUrl) {
                 const senderTag = event.isLoopback ? '自分(テスト)' : `端末 ${data.sender}`;
-                addLog(`[CH ${activeCh.id}] ${senderTag} からの音声を受信再生`, 'rx');
+                addLog(`[CH ${activeCh.id}] ${senderTag} からのグループ音声を受信再生`, 'rx');
                 await playVoiceDataUrl(data.audioDataUrl);
             } else if (data.type === 'RADIO_TEST_SIGNAL') {
                 const senderTag = event.isLoopback ? '自分(テスト)' : `端末 ${data.sender}`;
@@ -926,6 +1062,7 @@
             currentChannelIdx = (currentChannelIdx + delta + CHANNELS.length) % CHANNELS.length;
             updateChannelDisplay();
             addLog(`チャンネル切替: ${CHANNELS[currentChannelIdx].name}`, 'sys');
+            autoConnectChannelRoom();
         }
 
         function toggleLock() {
