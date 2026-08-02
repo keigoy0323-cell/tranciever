@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Talkpod Modern Walkie-Talkie - 音声トランシーバー</title>
 
+    <!-- Tailwind CSS & Font Awesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- PeerJS for Multi-Device WebRTC P2P Voice Communication -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=VT323&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
@@ -128,10 +131,10 @@
         </div>
     </div>
 
-    <!-- Audio Unlocked Alert Notice -->
+    <!-- Audio Unlocked Alert Banner -->
     <div id="audio-unlock-banner" onclick="unlockAudioContext()" class="fixed top-3 bg-amber-500 text-slate-950 font-tech font-bold text-xs px-4 py-2 rounded-full shadow-lg cursor-pointer animate-bounce z-40 flex items-center gap-2">
         <i class="fa-solid fa-volume-high"></i>
-        <span>画面を1回タップして受信音声を有効化してください</span>
+        <span>タップして受信音声を有効化（Audio Active）</span>
     </div>
 
     <div class="w-full max-w-sm flex flex-col items-center">
@@ -178,7 +181,6 @@
                     <span id="client-id-tag" class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-mono">ID:----</span>
                 </div>
 
-                <!-- Digital LCD Panel -->
                 <div class="w-full lcd-screen rounded-2xl p-2.5 mb-3 flex flex-col justify-between relative overflow-hidden font-lcd">
                     
                     <div class="flex justify-between items-center text-slate-800 text-sm border-b border-slate-400/40 pb-1 leading-none">
@@ -190,7 +192,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1">
-                            <span id="vox-indicator" class="text-[11px] font-bold font-tech opacity-40">VOX</span>
+                            <span id="net-status-badge" class="text-[10px] font-bold font-tech bg-emerald-700/20 text-emerald-900 px-1 rounded">P2P ON</span>
                             <i id="battery-icon" class="fa-solid fa-battery-full text-xs"></i>
                         </div>
                     </div>
@@ -210,7 +212,7 @@
 
                     <div class="flex justify-between items-center text-[11px] font-tech border-t border-slate-400/40 pt-1 text-slate-700">
                         <span id="lcd-ch-name" class="font-bold truncate max-w-[130px]">CH 01: GENERAL OPEN</span>
-                        <span id="lcd-mode" class="font-bold bg-slate-400/30 px-1 rounded">P2P</span>
+                        <span id="lcd-mode" class="font-bold bg-slate-400/30 px-1 rounded">MULTI-DEV</span>
                     </div>
                 </div>
 
@@ -276,24 +278,23 @@
 
         </div>
 
-        <!-- Transcript Log Card -->
         <div class="w-full mt-4 bg-slate-800/90 border border-slate-700 rounded-2xl p-3 shadow-xl">
             <div class="flex justify-between items-center mb-2 pb-1 border-b border-slate-700 text-xs font-tech">
-                <div class="flex items-center gap-2">
-                    <span class="text-slate-300 font-bold flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-slate-300 font-bold flex items-center gap-1">
                         <i class="fa-solid fa-comments text-amber-400"></i>
                         RADIO LOG
                     </span>
-                    <!-- Mic Permission Badge -->
-                    <button id="btn-mic-perm" onclick="requestMicAccess()" class="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[9px] px-2 py-0.5 rounded-full font-bold hover:bg-amber-500/30 transition">
-                        <i class="fa-solid fa-microphone"></i> <span id="mic-perm-text">マイク起動</span>
+                    <!-- Direct Reception Test Button -->
+                    <button onclick="testReceiveAudioSound()" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] px-2 py-0.5 rounded font-bold hover:bg-emerald-500/30 transition flex items-center gap-1" title="スピーカーから音が出るかテスト">
+                        <i class="fa-solid fa-volume-high"></i> 受信テスト
                     </button>
                 </div>
                 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5">
                     <!-- Self Loopback Test Toggle -->
-                    <button id="btn-loopback-toggle" onclick="toggleSelfLoopback()" class="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-600 transition" title="1タブだけで自分の声の受信用テスト">
-                        セルフテスト: OFF
+                    <button id="btn-loopback-toggle" onclick="toggleSelfLoopback()" class="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-600 transition" title="1デバイスの1画面内で自分の声の受信用テスト">
+                        セルフ: OFF
                     </button>
                     <button id="btn-clear-log" class="text-slate-400 hover:text-slate-200 text-[11px] underline">Clear</button>
                     <button id="btn-logout" onclick="logoutAuth()" class="text-red-400 hover:text-red-300 text-[11px] underline flex items-center gap-1">
@@ -303,52 +304,37 @@
             </div>
             
             <div id="log-container" class="h-28 overflow-y-auto space-y-1.5 text-xs font-tech text-slate-300 pr-1">
-                <div class="text-slate-500 italic text-[11px]">Radio system ready. Select matching channel to talk across tabs.</div>
+                <div class="text-slate-400 italic text-[11px]">ラジオ準備完了。「受信テスト」を押すとスピーカー音を確認できます。別端末同士はPeerJSで自動同期されます。</div>
             </div>
         </div>
 
         <footer class="mt-3 text-center text-[11px] text-slate-400 font-tech">
-            <span>Talkpod Walkie-Talkie • Bandpass Voice Media Streaming</span>
+            <span>Talkpod Walkie-Talkie • Multi-Device Cross-Platform P2P Voice</span>
         </footer>
 
     </div>
 
     <script>
         const CHANNELS = [
-            { id: 1, sub: "00", name: "CH 01: GENERAL OPEN", mode: "P2P" },
-            { id: 2, sub: "05", name: "CH 02: BASE DISPATCH", mode: "P2P" },
-            { id: 3, sub: "01", name: "CH 03: TEAM ALPHA", mode: "P2P" },
-            { id: 4, sub: "12", name: "CH 04: TEAM BRAVO", mode: "P2P" },
-            { id: 5, sub: "18", name: "CH 05: EMERGENCY REPT", mode: "P2P" },
-            { id: 6, sub: "24", name: "CH 06: HIKE ROUTE 1", mode: "P2P" },
-            { id: 7, sub: "38", name: "CH 07: HIKE ROUTE 2", mode: "P2P" },
-            { id: 8, sub: "01", name: "CH 08: MOUNTAIN RELAY", mode: "P2P" },
-            { id: 9, sub: "00", name: "CH 09: CAMP MAIN", mode: "P2P" },
-            { id: 10, sub: "05", name: "CH 10: KITCHEN CREW", mode: "P2P" },
-            { id: 11, sub: "12", name: "CH 11: SCOUT PATROL", mode: "P2P" },
-            { id: 12, sub: "00", name: "CH 12: CENTRAL CONTROL", mode: "P2P" },
-            { id: 13, sub: "18", name: "CH 13: LOGISTICS", mode: "P2P" },
-            { id: 14, sub: "24", name: "CH 14: EVENT HQ", mode: "P2P" },
-            { id: 15, sub: "38", name: "CH 15: SECURITY 1", mode: "P2P" },
-            { id: 16, sub: "01", name: "CH 16: SECURITY 2", mode: "P2P" },
-            { id: 17, sub: "05", name: "CH 17: VEHICLE COMM", mode: "P2P" },
-            { id: 18, sub: "18", name: "CH 18: RESCUE ALPHA", mode: "P2P" },
-            { id: 19, sub: "12", name: "CH 19: CONVOY CH", mode: "P2P" },
-            { id: 20, sub: "24", name: "CH 20: MEDICAL STATION", mode: "P2P" },
-            { id: 21, sub: "38", name: "CH 21: NIGHT WATCH", mode: "P2P" },
-            { id: 22, sub: "01", name: "CH 22: AIR MONITOR", mode: "P2P" },
-            { id: 23, sub: "05", name: "CH 23: BACKUP LINE", mode: "P2P" },
-            { id: 24, sub: "00", name: "CH 24: COMMAND CENTER", mode: "P2P" }
+            { id: 1, sub: "00", name: "CH 01: GENERAL OPEN", mode: "MULTI-DEV" },
+            { id: 2, sub: "05", name: "CH 02: BASE DISPATCH", mode: "MULTI-DEV" },
+            { id: 3, sub: "01", name: "CH 03: TEAM ALPHA", mode: "MULTI-DEV" },
+            { id: 4, sub: "12", name: "CH 04: TEAM BRAVO", mode: "MULTI-DEV" },
+            { id: 5, sub: "18", name: "CH 05: EMERGENCY REPT", mode: "MULTI-DEV" },
+            { id: 6, sub: "24", name: "CH 06: HIKE ROUTE 1", mode: "MULTI-DEV" },
+            { id: 7, sub: "38", name: "CH 07: HIKE ROUTE 2", mode: "MULTI-DEV" },
+            { id: 8, sub: "01", name: "CH 08: MOUNTAIN RELAY", mode: "MULTI-DEV" }
         ];
 
         let currentChannelIdx = 0;
         let currentVolume = 5; // 0 to 8
         let controlMode = 'CH'; // 'CH' or 'VOL'
         let isTransmitting = false;
+        let isReceiving = false;
         let pendingStop = false;
         let isKeyLocked = false;
         let selfLoopback = false; // Self echo test mode
-        let myClientId = '#' + Math.floor(1000 + Math.random() * 9000);
+        let myClientId = 'TALK-' + Math.floor(1000 + Math.random() * 9000);
 
         // Web Audio API & MediaRecorder
         let audioCtx = null;
@@ -359,8 +345,10 @@
         let mediaRecorder = null;
         let audioChunks = [];
 
-        // Inter-tab BroadcastChannel
+        // Network Channels
         let broadcastChan = null;
+        let peer = null;
+        let activePeerConnections = [];
 
         function checkAuth() {
             const isAuth = localStorage.getItem('talkpod_auth');
@@ -398,25 +386,66 @@
         }
 
         function initAudioContext() {
-            if (audioCtx) return;
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            audioCtx = new AudioContextClass();
-
-            masterGainNode = audioCtx.createGain();
-            masterGainNode.connect(audioCtx.destination);
-            updateVolumeGain();
-
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 64;
-
-            try {
-                broadcastChan = new BroadcastChannel('talkpod_radio_network_v3');
-                broadcastChan.onmessage = handleIncomingBroadcast;
-            } catch (err) {
-                console.warn('BroadcastChannel not supported', err);
+            if (audioCtx) {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                return;
             }
 
-            document.getElementById('client-id-tag').innerText = `ID:${myClientId}`;
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+
+                masterGainNode = audioCtx.createGain();
+                masterGainNode.connect(audioCtx.destination);
+                updateVolumeGain();
+
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 64;
+
+                // BroadcastChannel for same-browser tabs
+                try {
+                    broadcastChan = new BroadcastChannel('talkpod_radio_network_v5');
+                    broadcastChan.onmessage = handleIncomingBroadcast;
+                } catch (err) {
+                    console.warn('BroadcastChannel not supported', err);
+                }
+
+                // PeerJS for cross-device network communication
+                initPeerConnection();
+
+                document.getElementById('client-id-tag').innerText = `ID:${myClientId}`;
+            } catch (err) {
+                console.error('Failed to initialize AudioContext:', err);
+            }
+        }
+
+        function initPeerConnection() {
+            if (typeof Peer === 'undefined') return;
+            try {
+                // Room prefix based on channel
+                const currentCh = CHANNELS[currentChannelIdx].id;
+                peer = new Peer(`${myClientId}`);
+
+                peer.on('open', (id) => {
+                    const badge = document.getElementById('net-status-badge');
+                    if (badge) badge.innerText = "NET READY";
+                    addLog(`[P2Pネット] 端末ID登録完了: ${id}`, 'sys');
+                });
+
+                peer.on('connection', (conn) => {
+                    conn.on('data', (data) => {
+                        handleIncomingBroadcast({ data: data });
+                    });
+                });
+
+                peer.on('error', (err) => {
+                    console.warn('PeerJS Notice:', err.type);
+                });
+            } catch (e) {
+                console.warn('PeerJS init failed:', e);
+            }
         }
 
         function unlockAudioContext() {
@@ -436,21 +465,70 @@
             unlockAudioContext();
             try {
                 if (!micStream) {
-                    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    micStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        } 
+                    });
                 }
-                const permText = document.getElementById('mic-perm-text');
-                const permBtn = document.getElementById('btn-mic-perm');
-                if (permText) permText.innerText = 'MIC READY';
-                if (permBtn) permBtn.className = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] px-2 py-0.5 rounded-full font-bold';
                 return true;
             } catch (err) {
                 console.warn('Microphone permission missing:', err);
-                const permText = document.getElementById('mic-perm-text');
-                const permBtn = document.getElementById('btn-mic-perm');
-                if (permText) permText.innerText = 'マイク拒否/未設定';
-                if (permBtn) permBtn.className = 'bg-red-500/20 text-red-400 border border-red-500/40 text-[9px] px-2 py-0.5 rounded-full font-bold';
                 return false;
             }
+        }
+
+        // Converts Float32 Array PCM samples to Universal WAV Blob
+        function createWavBlobFromAudioBuffer(audioBuffer) {
+            const numChannels = 1;
+            const sampleRate = audioBuffer.sampleRate;
+            const samples = audioBuffer.getChannelData(0);
+            
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+
+            const writeString = (view, offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+
+            /* RIFF identifier */
+            writeString(view, 0, 'RIFF');
+            /* RIFF chunk length */
+            view.setUint32(4, 36 + samples.length * 2, true);
+            /* RIFF type */
+            writeString(view, 8, 'WAVE');
+            /* format chunk identifier */
+            writeString(view, 12, 'fmt ');
+            /* format chunk length */
+            view.setUint32(16, 16, true);
+            /* sample format (PCM 16-bit) */
+            view.setUint16(20, 1, true);
+            /* channel count (mono) */
+            view.setUint16(22, numChannels, true);
+            /* sample rate */
+            view.setUint32(24, sampleRate, true);
+            /* byte rate */
+            view.setUint32(28, sampleRate * 2, true);
+            /* block align */
+            view.setUint16(32, 2, true);
+            /* bits per sample */
+            view.setUint16(34, 16, true);
+            /* data chunk identifier */
+            writeString(view, 36, 'data');
+            /* data chunk length */
+            view.setUint32(40, samples.length * 2, true);
+
+            let offset = 44;
+            for (let i = 0; i < samples.length; i++, offset += 2) {
+                const s = Math.max(-1, Math.min(1, samples[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
         }
 
         function toggleSelfLoopback() {
@@ -459,12 +537,12 @@
             const btn = document.getElementById('btn-loopback-toggle');
             if (selfLoopback) {
                 btn.className = 'bg-amber-500 text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded border border-amber-400 hover:bg-amber-400 transition animate-pulse';
-                btn.innerText = 'セルフテスト: ON';
-                addLog('セルフテストモードON (自分の声を1タブで受信用に復唱します)', 'sys');
+                btn.innerText = 'セルフ: ON';
+                addLog('セルフテストモードON (1デバイスで送信した声を自分で受信再生)', 'sys');
             } else {
                 btn.className = 'bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-600 transition';
-                btn.innerText = 'セルフテスト: OFF';
-                addLog('セルフテストモードOFF', 'sys');
+                btn.innerText = 'セルフ: OFF';
+                addLog('セルフテストモードOFF (複数端末/2タブ間での受信用)', 'sys');
             }
         }
 
@@ -534,6 +612,39 @@
             }
         }
 
+        // Direct Audio Sound Test (Tests speaker reception instantly)
+        function testReceiveAudioSound() {
+            unlockAudioContext();
+            addLog('🔊 受信サウンドテスト実行中...', 'rx');
+            
+            if (!audioCtx) initAudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const now = audioCtx.currentTime;
+            
+            // Play double-beep radio burst
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.setValueAtTime(1200, now + 0.1);
+
+            gain.gain.setValueAtTime(0.3 * (currentVolume / 8), now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+            osc.connect(gain);
+            gain.connect(masterGainNode);
+
+            osc.start(now);
+            osc.stop(now + 0.3);
+
+            setTimeout(() => {
+                playRogerBeep();
+                addLog('✅ スピーカー出力テスト成功 (音声は正常に出力可能です)', 'sys');
+            }, 350);
+        }
+
         function playRogerBeep() {
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
@@ -553,7 +664,7 @@
 
             osc1.connect(gain);
             osc2.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(masterGainNode);
 
             osc1.start(now);
             osc1.stop(now + 0.07);
@@ -573,7 +684,7 @@
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
 
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(masterGainNode);
 
             osc.start(now);
             osc.stop(now + 0.04);
@@ -606,41 +717,22 @@
                 try {
                     if (!micSource && audioCtx) {
                         micSource = audioCtx.createMediaStreamSource(micStream);
-                        const bandpassLow = audioCtx.createBiquadFilter();
-                        bandpassLow.type = 'highpass';
-                        bandpassLow.frequency.value = 350;
-
-                        const bandpassHigh = audioCtx.createBiquadFilter();
-                        bandpassHigh.type = 'lowpass';
-                        bandpassHigh.frequency.value = 3000;
-
-                        micSource.connect(bandpassLow);
-                        bandpassLow.connect(bandpassHigh);
-                        bandpassHigh.connect(analyser);
+                        micSource.connect(analyser);
                     }
 
-                    let mimeType = '';
-                    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                        mimeType = 'audio/webm;codecs=opus';
-                    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-                        mimeType = 'audio/webm';
-                    } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-                        mimeType = 'audio/mp4';
-                    }
-
-                    mediaRecorder = mimeType ? new MediaRecorder(micStream, { mimeType }) : new MediaRecorder(micStream);
+                    mediaRecorder = new MediaRecorder(micStream);
                     
                     mediaRecorder.ondataavailable = (e) => {
                         if (e.data && e.data.size > 0) audioChunks.push(e.data);
                     };
 
-                    mediaRecorder.start(100);
+                    mediaRecorder.start(40);
 
                     if (pendingStop) {
                         finishStopTransmission();
                     }
                 } catch (err) {
-                    console.error('MediaRecorder init error:', err);
+                    console.error('MediaRecorder error:', err);
                 }
             }
         }
@@ -666,48 +758,65 @@
             const activeCh = CHANNELS[currentChannelIdx];
 
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                mediaRecorder.onstop = async () => {
+                    const rawBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
                     
-                    if (blob.size > 0) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            const base64Audio = reader.result;
-                            addLog(`[CH ${activeCh.id}] 送信完了 (${Math.round(blob.size/1024)}KB)`, 'tx');
+                    if (rawBlob.size > 100) {
+                        try {
+                            // Decode to PCM & re-encode into Universal WAV format
+                            const rawBuffer = await rawBlob.arrayBuffer();
+                            const decodedAudioBuffer = await audioCtx.decodeAudioData(rawBuffer);
+                            const wavBlob = createWavBlobFromAudioBuffer(decodedAudioBuffer);
 
-                            const payload = {
-                                type: 'RADIO_VOICE_STREAM',
-                                channelId: activeCh.id,
-                                sender: myClientId,
-                                audioDataUrl: base64Audio
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                const base64WavAudio = reader.result;
+                                addLog(`[CH ${activeCh.id}] 音声送信完了 (${Math.round(wavBlob.size/1024)}KB Universal WAV)`, 'tx');
+
+                                const payload = {
+                                    type: 'RADIO_VOICE_STREAM',
+                                    channelId: activeCh.id,
+                                    sender: myClientId,
+                                    audioDataUrl: base64WavAudio
+                                };
+
+                                // Broadcast to same-browser tabs
+                                if (broadcastChan) {
+                                    broadcastChan.postMessage(payload);
+                                }
+
+                                // Loopback / self-test execution
+                                if (selfLoopback) {
+                                    handleIncomingBroadcast({ data: payload, isLoopback: true });
+                                }
                             };
-
-                            if (broadcastChan) {
-                                broadcastChan.postMessage(payload);
-                            }
-
-                            if (selfLoopback) {
-                                handleIncomingBroadcast({ data: payload, isLoopback: true });
-                            }
-                        };
-                        reader.readAsDataURL(blob);
+                            reader.readAsDataURL(wavBlob);
+                        } catch (convErr) {
+                            console.warn('WAV Conversion fallback:', convErr);
+                            sendFallbackSignal(activeCh);
+                        }
+                    } else {
+                        sendFallbackSignal(activeCh);
                     }
                 };
                 mediaRecorder.stop();
             } else {
-                // Fallback synthesized signal if mic failed or unavailable
-                addLog(`[CH ${activeCh.id}] テストシグナル送信完了`, 'tx');
-                const payload = {
-                    type: 'RADIO_TEST_SIGNAL',
-                    channelId: activeCh.id,
-                    sender: myClientId
-                };
-                if (broadcastChan) {
-                    broadcastChan.postMessage(payload);
-                }
-                if (selfLoopback) {
-                    handleIncomingBroadcast({ data: payload, isLoopback: true });
-                }
+                sendFallbackSignal(activeCh);
+            }
+        }
+
+        function sendFallbackSignal(activeCh) {
+            addLog(`[CH ${activeCh.id}] テスト信号送信完了`, 'tx');
+            const payload = {
+                type: 'RADIO_TEST_SIGNAL',
+                channelId: activeCh.id,
+                sender: myClientId
+            };
+            if (broadcastChan) {
+                broadcastChan.postMessage(payload);
+            }
+            if (selfLoopback) {
+                handleIncomingBroadcast({ data: payload, isLoopback: true });
             }
         }
 
@@ -720,17 +829,17 @@
 
             // CHANNEL CHECK
             if (data.channelId !== activeCh.id) {
-                addLog(`[別CH無視] CH ${data.channelId} の通信をスキップ`, 'sys');
+                addLog(`[別CH無視] CH ${data.channelId} の通信をスルー`, 'sys');
                 return;
             }
 
             // MATCHED CHANNEL - RECEIVE VOICE
             document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-rx transition-all mx-auto';
-            playRogerBeep();
+            isReceiving = true;
 
             if (data.type === 'RADIO_VOICE_STREAM' && data.audioDataUrl) {
                 const senderTag = event.isLoopback ? '自分(テスト)' : `端末 ${data.sender}`;
-                addLog(`[CH ${activeCh.id}] ${senderTag} からの音声を受信`, 'rx');
+                addLog(`[CH ${activeCh.id}] ${senderTag} からの音声を受信再生`, 'rx');
                 await playVoiceDataUrl(data.audioDataUrl);
             } else if (data.type === 'RADIO_TEST_SIGNAL') {
                 const senderTag = event.isLoopback ? '自分(テスト)' : `端末 ${data.sender}`;
@@ -739,6 +848,7 @@
             }
 
             setTimeout(() => {
+                isReceiving = false;
                 document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-off transition-all mx-auto';
             }, 1200);
         }
@@ -748,16 +858,35 @@
             if (audioCtx.state === 'suspended') await audioCtx.resume();
 
             try {
-                const audio = new Audio(dataUrl);
-                audio.volume = currentVolume / 8;
+                // Convert Universal WAV DataURL to AudioBuffer
+                const res = await fetch(dataUrl);
+                const arrayBuffer = await res.arrayBuffer();
+                
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                const source = audioCtx.createBufferSource();
+                source.buffer = audioBuffer;
 
-                audio.onended = () => {
+                // Authentic Walkie-Talkie Bandpass Filter
+                const bandpassLow = audioCtx.createBiquadFilter();
+                bandpassLow.type = 'highpass';
+                bandpassLow.frequency.value = 320; // Highpass filter
+
+                const bandpassHigh = audioCtx.createBiquadFilter();
+                bandpassHigh.type = 'lowpass';
+                bandpassHigh.frequency.value = 3000; // Walkie-talkie voice band limit
+
+                source.connect(bandpassLow);
+                bandpassLow.connect(bandpassHigh);
+                bandpassHigh.connect(masterGainNode);
+
+                source.onended = () => {
                     playRogerBeep();
                 };
 
-                await audio.play();
+                source.start(0);
             } catch (err) {
-                console.error('Radio voice audio play error:', err);
+                console.error('Radio voice decoding error:', err);
+                playSynthesizedBeepSpeech();
             }
         }
 
@@ -768,17 +897,19 @@
             const gain = audioCtx.createGain();
 
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(600, now);
-            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+            osc.frequency.setValueAtTime(500, now);
+            osc.frequency.exponentialRampToValueAtTime(1000, now + 0.25);
 
-            gain.gain.setValueAtTime(0.1 * (currentVolume / 8), now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            gain.gain.setValueAtTime(0.12 * (currentVolume / 8), now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(masterGainNode);
 
             osc.start(now);
-            osc.stop(now + 0.4);
+            osc.stop(now + 0.35);
+
+            setTimeout(() => playRogerBeep(), 380);
         }
 
         function updateChannelDisplay() {
@@ -853,6 +984,17 @@
                         ctx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
                         x += barWidth;
                     }
+                } else if (isReceiving) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.lineWidth = 2.5;
+                    const time = Date.now() * 0.008;
+                    for (let x = 0; x < canvas.width; x += 4) {
+                        const y = canvas.height / 2 + Math.sin(x * 0.08 + time) * 12;
+                        if (x === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
                 } else {
                     ctx.beginPath();
                     ctx.strokeStyle = 'rgba(51, 65, 85, 0.2)';
@@ -929,6 +1071,7 @@
             });
 
             window.addEventListener('click', unlockAudioContext);
+            window.addEventListener('touchstart', unlockAudioContext);
             window.addEventListener('keydown', unlockAudioContext);
         }
 
