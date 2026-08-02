@@ -261,7 +261,7 @@
                 <!-- Speaker Grille with Canvas Visualizer -->
                 <div class="w-full h-28 speaker-dots rounded-2xl my-2 border border-slate-200/60 relative overflow-hidden flex items-center justify-center">
                     <canvas id="audio-wave-canvas" class="w-full h-full absolute inset-0 opacity-50 pointer-events-none"></canvas>
-                    <div id="speaker-status" class="text-[10px] font-tech text-slate-600 bg-white/90 px-2.5 py-1 rounded-full font-bold shadow-sm z-10 border border-slate-200">
+                    <div id="speaker-status" class="text-[10px] font-tech text-slate-600 bg-white/90 px-2.5 py-1 rounded-full font-bold shadow-sm z-10 border border-slate-200 text-center">
                         HOLD SIDE BUTTON OR SPACE TO TALK
                     </div>
                 </div>
@@ -279,12 +279,23 @@
         <!-- Transcript Log Card -->
         <div class="w-full mt-4 bg-slate-800/90 border border-slate-700 rounded-2xl p-3 shadow-xl">
             <div class="flex justify-between items-center mb-2 pb-1 border-b border-slate-700 text-xs font-tech">
-                <span class="text-slate-300 font-bold flex items-center gap-1.5">
-                    <i class="fa-solid fa-comments text-amber-400"></i>
-                    RADIO LOG & STATUS
-                </span>
-                <div class="flex items-center gap-3">
-                    <button id="btn-clear-log" class="text-slate-400 hover:text-slate-200 text-[11px] underline">Clear Log</button>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-300 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-comments text-amber-400"></i>
+                        RADIO LOG
+                    </span>
+                    <!-- Mic Permission Badge -->
+                    <button id="btn-mic-perm" onclick="requestMicAccess()" class="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[9px] px-2 py-0.5 rounded-full font-bold hover:bg-amber-500/30 transition">
+                        <i class="fa-solid fa-microphone"></i> <span id="mic-perm-text">マイク起動</span>
+                    </button>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <!-- Self Loopback Test Toggle -->
+                    <button id="btn-loopback-toggle" onclick="toggleSelfLoopback()" class="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-600 transition" title="1タブだけで自分の声の受信用テスト">
+                        セルフテスト: OFF
+                    </button>
+                    <button id="btn-clear-log" class="text-slate-400 hover:text-slate-200 text-[11px] underline">Clear</button>
                     <button id="btn-logout" onclick="logoutAuth()" class="text-red-400 hover:text-red-300 text-[11px] underline flex items-center gap-1">
                         <i class="fa-solid fa-lock text-[10px]"></i> Lock
                     </button>
@@ -334,7 +345,9 @@
         let currentVolume = 5; // 0 to 8
         let controlMode = 'CH'; // 'CH' or 'VOL'
         let isTransmitting = false;
+        let pendingStop = false;
         let isKeyLocked = false;
+        let selfLoopback = false; // Self echo test mode
         let myClientId = '#' + Math.floor(1000 + Math.random() * 9000);
 
         // Web Audio API & MediaRecorder
@@ -343,8 +356,6 @@
         let micStream = null;
         let micSource = null;
         let analyser = null;
-        let staticNoiseNode = null;
-        let staticGainNode = null;
         let mediaRecorder = null;
         let audioChunks = [];
 
@@ -398,10 +409,8 @@
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 64;
 
-            setupBackgroundStaticNoise();
-
             try {
-                broadcastChan = new BroadcastChannel('talkpod_radio_network_v2');
+                broadcastChan = new BroadcastChannel('talkpod_radio_network_v3');
                 broadcastChan.onmessage = handleIncomingBroadcast;
             } catch (err) {
                 console.warn('BroadcastChannel not supported', err);
@@ -416,11 +425,46 @@
                 audioCtx.resume().then(() => {
                     const banner = document.getElementById('audio-unlock-banner');
                     if (banner) banner.remove();
-                    addLog('音声コンテキスト有効化完了 (受信準備完了)', 'sys');
                 });
             } else {
                 const banner = document.getElementById('audio-unlock-banner');
                 if (banner) banner.remove();
+            }
+        }
+
+        async function requestMicAccess() {
+            unlockAudioContext();
+            try {
+                if (!micStream) {
+                    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                }
+                const permText = document.getElementById('mic-perm-text');
+                const permBtn = document.getElementById('btn-mic-perm');
+                if (permText) permText.innerText = 'MIC READY';
+                if (permBtn) permBtn.className = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[9px] px-2 py-0.5 rounded-full font-bold';
+                return true;
+            } catch (err) {
+                console.warn('Microphone permission missing:', err);
+                const permText = document.getElementById('mic-perm-text');
+                const permBtn = document.getElementById('btn-mic-perm');
+                if (permText) permText.innerText = 'マイク拒否/未設定';
+                if (permBtn) permBtn.className = 'bg-red-500/20 text-red-400 border border-red-500/40 text-[9px] px-2 py-0.5 rounded-full font-bold';
+                return false;
+            }
+        }
+
+        function toggleSelfLoopback() {
+            selfLoopback = !selfLoopback;
+            playKeyClickSound();
+            const btn = document.getElementById('btn-loopback-toggle');
+            if (selfLoopback) {
+                btn.className = 'bg-amber-500 text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded border border-amber-400 hover:bg-amber-400 transition animate-pulse';
+                btn.innerText = 'セルフテスト: ON';
+                addLog('セルフテストモードON (自分の声を1タブで受信用に復唱します)', 'sys');
+            } else {
+                btn.className = 'bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600 hover:bg-slate-600 transition';
+                btn.innerText = 'セルフテスト: OFF';
+                addLog('セルフテストモードOFF', 'sys');
             }
         }
 
@@ -490,33 +534,6 @@
             }
         }
 
-        function setupBackgroundStaticNoise() {
-            if (!audioCtx) return;
-            const bufferSize = audioCtx.sampleRate * 2;
-            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                output[i] = Math.random() * 2 - 1;
-            }
-
-            staticNoiseNode = audioCtx.createBufferSource();
-            staticNoiseNode.buffer = noiseBuffer;
-            staticNoiseNode.loop = true;
-
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'bandpass';
-            filter.frequency.value = 1200;
-            filter.Q.value = 1.0;
-
-            staticGainNode = audioCtx.createGain();
-            staticGainNode.gain.value = 0.003;
-
-            staticNoiseNode.connect(filter);
-            filter.connect(staticGainNode);
-            staticGainNode.connect(masterGainNode || audioCtx.destination);
-            staticNoiseNode.start();
-        }
-
         function playRogerBeep() {
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
@@ -531,12 +548,12 @@
             osc1.frequency.setValueAtTime(1200, now);
             osc2.frequency.setValueAtTime(1800, now + 0.07);
 
-            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.setValueAtTime(0.15 * (currentVolume / 8), now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
 
             osc1.connect(gain);
             osc2.connect(gain);
-            gain.connect(masterGainNode || audioCtx.destination);
+            gain.connect(audioCtx.destination);
 
             osc1.start(now);
             osc1.stop(now + 0.07);
@@ -552,11 +569,11 @@
 
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(800, now);
-            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.setValueAtTime(0.08 * (currentVolume / 8), now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
 
             osc.connect(gain);
-            gain.connect(masterGainNode || audioCtx.destination);
+            gain.connect(audioCtx.destination);
 
             osc.start(now);
             osc.stop(now + 0.04);
@@ -569,6 +586,7 @@
             unlockAudioContext();
 
             isTransmitting = true;
+            pendingStop = false;
             audioChunks = [];
 
             // UI Updates
@@ -577,47 +595,63 @@
             document.getElementById('speaker-status').innerText = 'TRANSMITTING... (SPEAK NOW)';
             document.getElementById('speaker-status').className = 'text-[10px] font-tech text-red-600 bg-red-100 px-2.5 py-1 rounded-full font-bold shadow-sm z-10 border border-red-300 animate-pulse';
 
-            if (staticGainNode) staticGainNode.gain.value = 0.015;
+            const hasMic = await requestMicAccess();
 
-            // MediaStream & MediaRecorder setup
-            try {
-                if (!micStream) {
-                    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            if (pendingStop) {
+                finishStopTransmission();
+                return;
+            }
+
+            if (hasMic && micStream) {
+                try {
+                    if (!micSource && audioCtx) {
+                        micSource = audioCtx.createMediaStreamSource(micStream);
+                        const bandpassLow = audioCtx.createBiquadFilter();
+                        bandpassLow.type = 'highpass';
+                        bandpassLow.frequency.value = 350;
+
+                        const bandpassHigh = audioCtx.createBiquadFilter();
+                        bandpassHigh.type = 'lowpass';
+                        bandpassHigh.frequency.value = 3000;
+
+                        micSource.connect(bandpassLow);
+                        bandpassLow.connect(bandpassHigh);
+                        bandpassHigh.connect(analyser);
+                    }
+
+                    let mimeType = '';
+                    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                        mimeType = 'audio/webm;codecs=opus';
+                    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                        mimeType = 'audio/webm';
+                    } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        mimeType = 'audio/mp4';
+                    }
+
+                    mediaRecorder = mimeType ? new MediaRecorder(micStream, { mimeType }) : new MediaRecorder(micStream);
+                    
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data && e.data.size > 0) audioChunks.push(e.data);
+                    };
+
+                    mediaRecorder.start(100);
+
+                    if (pendingStop) {
+                        finishStopTransmission();
+                    }
+                } catch (err) {
+                    console.error('MediaRecorder init error:', err);
                 }
-
-                micSource = audioCtx.createMediaStreamSource(micStream);
-                const bandpassLow = audioCtx.createBiquadFilter();
-                bandpassLow.type = 'highpass';
-                bandpassLow.frequency.value = 350;
-
-                const bandpassHigh = audioCtx.createBiquadFilter();
-                bandpassHigh.type = 'lowpass';
-                bandpassHigh.frequency.value = 3000;
-
-                micSource.connect(bandpassLow);
-                bandpassLow.connect(bandpassHigh);
-                bandpassHigh.connect(analyser);
-
-                // Setup MediaRecorder
-                let mimeType = 'audio/webm';
-                if (!MediaRecorder.isTypeSupported('audio/webm')) {
-                    mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
-                }
-
-                mediaRecorder = mimeType ? new MediaRecorder(micStream, { mimeType }) : new MediaRecorder(micStream);
-                
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) audioChunks.push(e.data);
-                };
-
-                mediaRecorder.start(50); // Record chunks every 50ms
-
-            } catch (err) {
-                console.warn('Microphone not available, using tone generator fallback', err);
             }
         }
 
         function stopTransmission() {
+            if (!isTransmitting) return;
+            pendingStop = true;
+            finishStopTransmission();
+        }
+
+        function finishStopTransmission() {
             if (!isTransmitting) return;
             isTransmitting = false;
 
@@ -627,52 +661,65 @@
             document.getElementById('speaker-status').innerText = 'HOLD SIDE BUTTON OR SPACE TO TALK';
             document.getElementById('speaker-status').className = 'text-[10px] font-tech text-slate-600 bg-white/90 px-2.5 py-1 rounded-full font-bold shadow-sm z-10 border border-slate-200';
 
-            if (staticGainNode) staticGainNode.gain.value = 0.003;
-
             playRogerBeep();
 
             const activeCh = CHANNELS[currentChannelIdx];
 
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-                mediaRecorder.onstop = async () => {
+                mediaRecorder.onstop = () => {
                     const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-                    const arrayBuffer = await blob.arrayBuffer();
+                    
+                    if (blob.size > 0) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const base64Audio = reader.result;
+                            addLog(`[CH ${activeCh.id}] 送信完了 (${Math.round(blob.size/1024)}KB)`, 'tx');
 
-                    addLog(`[CH ${activeCh.id}] 送信完了 (${Math.round(blob.size/1024)}KB)`, 'tx');
+                            const payload = {
+                                type: 'RADIO_VOICE_STREAM',
+                                channelId: activeCh.id,
+                                sender: myClientId,
+                                audioDataUrl: base64Audio
+                            };
 
-                    if (broadcastChan) {
-                        broadcastChan.postMessage({
-                            type: 'RADIO_VOICE_STREAM',
-                            channelId: activeCh.id,
-                            sender: myClientId,
-                            audioBuffer: arrayBuffer,
-                            mimeType: blob.type
-                        });
+                            if (broadcastChan) {
+                                broadcastChan.postMessage(payload);
+                            }
+
+                            if (selfLoopback) {
+                                handleIncomingBroadcast({ data: payload, isLoopback: true });
+                            }
+                        };
+                        reader.readAsDataURL(blob);
                     }
                 };
+                mediaRecorder.stop();
             } else {
-                // Fallback synthesized tone transmission if mic absent
+                // Fallback synthesized signal if mic failed or unavailable
                 addLog(`[CH ${activeCh.id}] テストシグナル送信完了`, 'tx');
+                const payload = {
+                    type: 'RADIO_TEST_SIGNAL',
+                    channelId: activeCh.id,
+                    sender: myClientId
+                };
                 if (broadcastChan) {
-                    broadcastChan.postMessage({
-                        type: 'RADIO_TEST_SIGNAL',
-                        channelId: activeCh.id,
-                        sender: myClientId
-                    });
+                    broadcastChan.postMessage(payload);
+                }
+                if (selfLoopback) {
+                    handleIncomingBroadcast({ data: payload, isLoopback: true });
                 }
             }
         }
 
         async function handleIncomingBroadcast(event) {
             const data = event.data;
-            if (!data || data.sender === myClientId) return;
+            if (!data) return;
+            if (data.sender === myClientId && !event.isLoopback) return;
 
             const activeCh = CHANNELS[currentChannelIdx];
 
             // CHANNEL CHECK
             if (data.channelId !== activeCh.id) {
-                // Different channel - SILENCE & LOG IGNORE
                 addLog(`[別CH無視] CH ${data.channelId} の通信をスキップ`, 'sys');
                 return;
             }
@@ -681,51 +728,36 @@
             document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-rx transition-all mx-auto';
             playRogerBeep();
 
-            if (data.type === 'RADIO_VOICE_STREAM' && data.audioBuffer) {
-                addLog(`[CH ${activeCh.id}] 端末 ${data.sender} からの音声を受信`, 'rx');
-                await playFilteredRadioVoice(data.audioBuffer);
+            if (data.type === 'RADIO_VOICE_STREAM' && data.audioDataUrl) {
+                const senderTag = event.isLoopback ? '自分(テスト)' : `端末 ${data.sender}`;
+                addLog(`[CH ${activeCh.id}] ${senderTag} からの音声を受信`, 'rx');
+                await playVoiceDataUrl(data.audioDataUrl);
             } else if (data.type === 'RADIO_TEST_SIGNAL') {
-                addLog(`[CH ${activeCh.id}] 端末 ${data.sender} からテスト信号を受信`, 'rx');
+                const senderTag = event.isLoopback ? '自分(テスト)' : `端末 ${data.sender}`;
+                addLog(`[CH ${activeCh.id}] ${senderTag} からテスト信号を受信`, 'rx');
                 playSynthesizedBeepSpeech();
             }
 
             setTimeout(() => {
                 document.getElementById('tx-rx-led').className = 'w-3.5 h-3.5 rounded-full led-off transition-all mx-auto';
-            }, 1000);
+            }, 1200);
         }
 
-        async function playFilteredRadioVoice(arrayBuffer) {
+        async function playVoiceDataUrl(dataUrl) {
             if (!audioCtx) initAudioContext();
             if (audioCtx.state === 'suspended') await audioCtx.resume();
 
             try {
-                const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-                const source = audioCtx.createBufferSource();
-                source.buffer = audioBuffer;
+                const audio = new Audio(dataUrl);
+                audio.volume = currentVolume / 8;
 
-                // Authentic bandpass filter for walkie-talkie speaker effect
-                const hp = audioCtx.createBiquadFilter();
-                hp.type = 'highpass';
-                hp.frequency.value = 450;
-
-                const lp = audioCtx.createBiquadFilter();
-                lp.type = 'lowpass';
-                lp.frequency.value = 2600;
-
-                const rxGain = audioCtx.createGain();
-                rxGain.gain.value = currentVolume / 8;
-
-                source.connect(hp);
-                hp.connect(lp);
-                lp.connect(rxGain);
-                rxGain.connect(audioCtx.destination);
-
-                source.start(0);
-                source.onended = () => {
+                audio.onended = () => {
                     playRogerBeep();
                 };
+
+                await audio.play();
             } catch (err) {
-                console.error('Radio voice play error:', err);
+                console.error('Radio voice audio play error:', err);
             }
         }
 
@@ -743,7 +775,7 @@
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
 
             osc.connect(gain);
-            gain.connect(masterGainNode || audioCtx.destination);
+            gain.connect(audioCtx.destination);
 
             osc.start(now);
             osc.stop(now + 0.4);
